@@ -108,8 +108,15 @@
             </select>
           </div>
           <div>
-            <div class="muted">Giờ sync hằng ngày (UTC)</div>
+            <div class="muted">Giờ sync hằng ngày</div>
             <input id="autoSyncTime" type="time" value="01:00">
+          </div>
+          <div>
+            <div class="muted">Múi giờ</div>
+            <select id="autoSyncTimeZone">
+              <option value="UTC">UTC</option>
+              <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (UTC+7)</option>
+            </select>
           </div>
           <div>
             <div class="muted">Số ngày lấy lại</div>
@@ -211,11 +218,19 @@ function setTodayInputs(){
   kysonDateFrom.value = d;
   kysonDateTo.value = d;
 }
-function renderAutoSync(autoSync={}, scheduler={}){
+function fillTimeZoneOptions(list=[]){
+  const current = autoSyncTimeZone.value || 'UTC';
+  const uniq = [...new Set(['UTC','Asia/Ho_Chi_Minh', ...list.filter(Boolean)])];
+  autoSyncTimeZone.innerHTML = uniq.map(tz => `<option value="${esc(tz)}">${esc(tz === 'Asia/Ho_Chi_Minh' ? 'Asia/Ho_Chi_Minh (UTC+7)' : tz)}</option>`).join('');
+  autoSyncTimeZone.value = uniq.includes(current) ? current : 'UTC';
+}
+function renderAutoSync(autoSync={}, scheduler={}, supportedTimeZones=[]){
+  fillTimeZoneOptions(supportedTimeZones);
   autoSyncEnabled.value = String(!!autoSync.enabled);
   autoSyncTime.value = autoSync.time || '01:00';
+  autoSyncTimeZone.value = autoSync.timeZone || 'UTC';
   autoSyncDaysBack.value = autoSync.daysBack || 1;
-  const state = scheduler.running ? 'Đang chạy' : (autoSync.enabled ? `Bật ${autoSync.time} UTC` : 'Tắt');
+  const state = scheduler.running ? 'Đang chạy' : (autoSync.enabled ? `Bật ${autoSync.time} (${autoSync.timeZone || 'UTC'})` : 'Tắt');
   kAutoSyncState.textContent = state;
   const lastRun = autoSync.lastRunAt ? `Lần cuối: ${autoSync.lastRunAt}` : 'Chưa chạy tự động lần nào.';
   const lastError = autoSync.lastError ? ` Lỗi cuối: ${autoSync.lastError}` : '';
@@ -248,6 +263,7 @@ async function boot(){
     document.getElementById('autoSyncSaveBtn').disabled=!admin;
     document.getElementById('autoSyncEnabled').disabled=!admin;
     document.getElementById('autoSyncTime').disabled=!admin;
+    document.getElementById('autoSyncTimeZone').disabled=!admin;
     document.getElementById('autoSyncDaysBack').disabled=!admin;
     if(admin) loadUsers();
     setTodayInputs();
@@ -294,7 +310,7 @@ function renderKyson(kyson={}, scheduler={}){
   const totalWater = reportRows.reduce((sum,[,r])=>sum + Number(r.total_m3 || 0), 0);
 
   kSyncedAt.textContent = kyson.syncedAt || 'Chưa có';
-  kAutoSyncState.textContent = scheduler.running ? 'Đang chạy' : ((kyson.autoSync && kyson.autoSync.enabled) ? `Bật ${kyson.autoSync.time} UTC` : 'Tắt');
+  kAutoSyncState.textContent = scheduler.running ? 'Đang chạy' : ((kyson.autoSync && kyson.autoSync.enabled) ? `Bật ${kyson.autoSync.time} (${kyson.autoSync.timeZone || 'UTC'})` : 'Tắt');
   kPumpCount.textContent = pumps.length;
   kSensorCount.textContent = sensors.length;
   kStatusCount.textContent = statuses.length;
@@ -323,25 +339,26 @@ async function loadKyson(){
   try{
     const data = await api('/api/kyson');
     renderKyson(data.kyson || {}, data.scheduler || {});
-    renderAutoSync((data.kyson || {}).autoSync || {}, data.scheduler || {});
+    renderAutoSync((data.kyson || {}).autoSync || {}, data.scheduler || {}, data.supportedTimeZones || []);
     msg('kysonMsg', data.kyson?.syncedAt ? `Đã nạp cache Kyson: ${data.kyson.syncedAt}` : 'Chưa đồng bộ Kyson lần nào.', !!data.kyson?.syncedAt);
   }catch(e){ msg('kysonMsg', e.message); }
 }
 async function loadAutoSyncSettings(){
   try{
     const data = await api('/api/kyson/auto-sync');
-    renderAutoSync(data.autoSync || {}, data.scheduler || {});
+    renderAutoSync(data.autoSync || {}, data.scheduler || {}, data.supportedTimeZones || []);
   }catch(e){ msg('autoSyncMsg', e.message); }
 }
 async function saveAutoSyncSettings(){
   try{
     const enabled = autoSyncEnabled.value === 'true';
     const time = autoSyncTime.value;
+    const timeZone = autoSyncTimeZone.value;
     const daysBack = Number(autoSyncDaysBack.value || 1);
     autoSyncSaveBtn.disabled = true;
-    const data = await api('/api/kyson/auto-sync', {method:'POST', body:JSON.stringify({enabled, time, daysBack})});
-    renderAutoSync(data.autoSync || {}, {});
-    msg('autoSyncMsg', `Đã lưu lịch sync: ${enabled ? `${time} UTC, lấy lại ${daysBack} ngày` : 'tắt tự động'}.`, true);
+    const data = await api('/api/kyson/auto-sync', {method:'POST', body:JSON.stringify({enabled, time, timeZone, daysBack})});
+    renderAutoSync(data.autoSync || {}, {}, data.supportedTimeZones || []);
+    msg('autoSyncMsg', `Đã lưu lịch sync: ${enabled ? `${time} (${timeZone}), lấy lại ${daysBack} ngày` : 'tắt tự động'}.`, true);
     await loadKyson();
   }catch(e){ msg('autoSyncMsg', e.message); }
   finally{ autoSyncSaveBtn.disabled = false; }

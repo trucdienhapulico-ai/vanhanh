@@ -162,12 +162,12 @@ Sau khi đăng nhập:
 Trong cùng thẻ có mục **Cài đặt sync tự động**:
 - bật / tắt auto sync
 - chọn giờ chạy hằng ngày
+- chọn **múi giờ** (`UTC`, `Asia/Ho_Chi_Minh`, hoặc múi giờ máy chủ nếu có)
 - chọn `Số ngày lấy lại`
 
-Giờ hiện dùng theo **UTC** của máy chủ.
 Ví dụ:
-- `01:00`, `1 ngày` → mỗi ngày sync dữ liệu của đúng hôm đó
-- `01:00`, `3 ngày` → mỗi ngày sync lại 3 ngày gần nhất
+- `01:00`, `Asia/Ho_Chi_Minh`, `1 ngày` → mỗi ngày sync dữ liệu của đúng hôm đó theo giờ Việt Nam
+- `01:00`, `UTC`, `3 ngày` → mỗi ngày sync lại 3 ngày gần nhất theo giờ UTC
 
 App sẽ lưu cache nội bộ vào `data/db.json`, gồm:
 - snapshot hiện tại: pump / sensor / status / setting / grafana

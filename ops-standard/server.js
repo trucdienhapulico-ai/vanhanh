@@ -45,10 +45,40 @@ function normalizeTime(value) {
   const text = String(value);
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(text) ? text : null;
 }
+function listSupportedTimeZones() {
+  return [...new Set(['UTC', 'Asia/Ho_Chi_Minh', Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'])];
+}
+function normalizeTimeZone(value) {
+  const candidate = String(value || '').trim();
+  if (!candidate) return 'UTC';
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(new Date());
+    return candidate;
+  } catch {
+    return 'UTC';
+  }
+}
+function zonedParts(date, timeZone) {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(date).filter(p => p.type !== 'literal').map(p => [p.type, p.value]));
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    hhmm: `${parts.hour}:${parts.minute}`,
+  };
+}
 function defaultKysonAutoSync() {
   return {
     enabled: false,
     time: '01:00',
+    timeZone: 'UTC',
     daysBack: 1,
     lastRunAt: null,
     lastRange: null,
@@ -60,10 +90,12 @@ function normalizeAutoSync(input = {}) {
   const base = { ...defaultKysonAutoSync(), ...(input || {}) };
   const enabled = Boolean(base.enabled);
   const time = normalizeTime(base.time) || '01:00';
+  const timeZone = normalizeTimeZone(base.timeZone);
   const daysBackNum = Math.min(30, Math.max(1, Number(base.daysBack || 1)));
   return {
     enabled,
     time,
+    timeZone,
     daysBack: Math.floor(daysBackNum),
     lastRunAt: base.lastRunAt || null,
     lastRange: base.lastRange || null,
@@ -215,7 +247,7 @@ async function runAutoSync(reason = 'schedule') {
     const db = loadDb();
     const autoSync = normalizeAutoSync(db.kyson.autoSync);
     if (!autoSync.enabled) return false;
-    const to = today();
+    const to = zonedParts(new Date(), autoSync.timeZone).date;
     const from = shiftDate(to, -(autoSync.daysBack - 1));
     db.kyson.autoSync = { ...autoSync, lastStatus: 'running', lastError: null, lastRange: { from, to, reason } };
     saveDb(db);
@@ -226,6 +258,7 @@ async function runAutoSync(reason = 'schedule') {
       ...normalizeAutoSync(updated.kyson.autoSync),
       enabled: autoSync.enabled,
       time: autoSync.time,
+      timeZone: autoSync.timeZone,
       daysBack: autoSync.daysBack,
       lastRunAt: synced.syncedAt,
       lastRange: { from, to, reason },
@@ -252,11 +285,10 @@ function schedulerTick() {
   const db = loadDb();
   const autoSync = normalizeAutoSync(db.kyson.autoSync);
   if (!autoSync.enabled) return;
-  const current = new Date();
-  const hhmm = current.toISOString().slice(11, 16);
-  const todayKey = current.toISOString().slice(0, 10);
-  const alreadyRan = autoSync.lastRunAt && autoSync.lastRunAt.slice(0, 10) === todayKey && autoSync.lastRunAt.slice(11, 16) === autoSync.time;
-  if (hhmm === autoSync.time && !alreadyRan) {
+  const currentParts = zonedParts(new Date(), autoSync.timeZone);
+  const lastRunDate = autoSync.lastRunAt ? zonedParts(new Date(autoSync.lastRunAt), autoSync.timeZone).date : null;
+  const alreadyRan = lastRunDate === currentParts.date;
+  if (currentParts.hhmm === autoSync.time && !alreadyRan) {
     runAutoSync('schedule');
   }
 }
@@ -301,12 +333,12 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && url.pathname === '/api/kyson') {
       const me = requireAuth(req, res); if (!me) return;
-      return send(res, 200, { kyson: db.kyson, scheduler: schedulerState });
+      return send(res, 200, { kyson: db.kyson, scheduler: schedulerState, supportedTimeZones: listSupportedTimeZones() });
     }
 
     if (req.method === 'GET' && url.pathname === '/api/kyson/auto-sync') {
       const me = requireAuth(req, res); if (!me) return;
-      return send(res, 200, { autoSync: db.kyson.autoSync, scheduler: schedulerState });
+      return send(res, 200, { autoSync: db.kyson.autoSync, scheduler: schedulerState, supportedTimeZones: listSupportedTimeZones() });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/kyson/auto-sync') {
@@ -318,10 +350,11 @@ const server = http.createServer(async (req, res) => {
         ...normalizeAutoSync(db.kyson.autoSync),
         enabled: autoSync.enabled,
         time: autoSync.time,
+        timeZone: autoSync.timeZone,
         daysBack: autoSync.daysBack,
       };
       saveDb(db);
-      return send(res, 200, { ok: true, autoSync: db.kyson.autoSync });
+      return send(res, 200, { ok: true, autoSync: db.kyson.autoSync, supportedTimeZones: listSupportedTimeZones() });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/kyson/sync') {
