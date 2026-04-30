@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ops Standard Local</title>
+  <style>
+    body{font-family:system-ui,-apple-system,sans-serif;max-width:1100px;margin:0 auto;padding:24px;background:#f4f7f8;color:#102027}
+    .card{background:#fff;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+    h1,h2{margin:0 0 12px}
+    input,select,button,textarea{padding:10px;border:1px solid #cfd8dc;border-radius:10px;font:inherit}
+    button{cursor:pointer;background:#00695c;color:#fff;border:none}
+    button.secondary{background:#455a64}
+    button.warn{background:#b71c1c}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row>*{flex:1}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eceff1;text-align:left}
+    .hidden{display:none}
+    .muted{color:#607d8b}
+    .ok{color:#1b5e20}
+    .err{color:#b71c1c}
+    code{background:#eceff1;padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <h1>Ops Standard Local</h1>
+  <div class="muted">Đăng nhập • Phân quyền • Backup • Xuất file</div>
+
+  <div id="loginCard" class="card">
+    <h2>Đăng nhập</h2>
+    <div class="row">
+      <input id="loginUser" placeholder="Tài khoản" value="admin">
+      <input id="loginPass" placeholder="Mật khẩu" type="password" value="admin123!">
+      <button onclick="login()">Vào hệ thống</button>
+    </div>
+    <div id="loginMsg" class="muted"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="card">
+      <div class="row">
+        <div><b>Người dùng:</b> <span id="meName"></span></div>
+        <div><b>Vai trò:</b> <span id="meRole"></span></div>
+        <div><button class="secondary" onclick="logout()">Đăng xuất</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Nhật ký vận hành</h2>
+      <div class="row">
+        <input id="recTitle" placeholder="Tiêu đề công việc / sự cố">
+        <select id="recStatus">
+          <option value="open">open</option>
+          <option value="monitoring">monitoring</option>
+          <option value="closed">closed</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <textarea id="recNote" rows="4" placeholder="Ghi chú"></textarea>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="saveRecordBtn" onclick="createRecord()">Lưu nhật ký</button>
+        <button class="secondary" onclick="loadRecords()">Tải lại</button>
+        <button class="secondary" onclick="window.open('/api/export?format=json','_blank')">Xuất JSON</button>
+        <button class="secondary" onclick="window.open('/api/export?format=csv','_blank')">Xuất CSV</button>
+        <button id="backupBtn" class="warn" onclick="runBackup()">Backup ngay</button>
+      </div>
+      <div id="recordMsg" class="muted"></div>
+      <table style="margin-top:12px">
+        <thead><tr><th>Thời gian</th><th>Tiêu đề</th><th>Trạng thái</th><th>Người tạo</th><th>Ghi chú</th></tr></thead>
+        <tbody id="recordsBody"></tbody>
+      </table>
+    </div>
+
+    <div id="usersCard" class="card hidden">
+      <h2>Quản lý người dùng</h2>
+      <div class="row">
+        <input id="newUser" placeholder="username">
+        <input id="newPass" placeholder="password" type="password">
+        <select id="newRole">
+          <option value="viewer">viewer</option>
+          <option value="operator">operator</option>
+          <option value="admin">admin</option>
+        </select>
+        <button onclick="createUser()">Tạo user</button>
+      </div>
+      <div id="userMsg" class="muted" style="margin-top:10px"></div>
+      <table style="margin-top:12px">
+        <thead><tr><th>User</th><th>Vai trò</th><th>Tạo lúc</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+async function api(path, opts={}){
+  const res = await fetch(path, {headers:{'Content-Type':'application/json'}, credentials:'same-origin', ...opts});
+  const text = await res.text();
+  let data; try{data=JSON.parse(text)}catch{data={raw:text}}
+  if(!res.ok) throw new Error(data.error || text || 'Request lỗi');
+  return data;
+}
+function msg(id, text, ok=false){ const el=document.getElementById(id); el.textContent=text; el.className=ok?'ok':'err'; }
+async function login(){
+  try{
+    const username=document.getElementById('loginUser').value.trim();
+    const password=document.getElementById('loginPass').value;
+    await api('/api/login',{method:'POST',body:JSON.stringify({username,password})});
+    document.getElementById('loginMsg').textContent='';
+    await boot();
+  }catch(e){ msg('loginMsg', e.message); }
+}
+async function logout(){ await api('/api/logout',{method:'POST'}); location.reload(); }
+async function boot(){
+  try{
+    const me=await api('/api/me');
+    document.getElementById('loginCard').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('meName').textContent=me.username;
+    document.getElementById('meRole').textContent=me.role;
+    const admin=me.role==='admin';
+    const canWrite=me.role==='admin'||me.role==='operator';
+    document.getElementById('usersCard').classList.toggle('hidden', !admin);
+    document.getElementById('backupBtn').disabled=!admin;
+    document.getElementById('saveRecordBtn').disabled=!canWrite;
+    if(admin) loadUsers();
+    loadRecords();
+  }catch{}
+}
+async function loadRecords(){
+  const data=await api('/api/records');
+  document.getElementById('recordsBody').innerHTML = data.records.slice().reverse().map(r=>`<tr><td>${r.createdAt}</td><td>${r.title}</td><td>${r.status}</td><td>${r.createdBy}</td><td>${r.note||''}</td></tr>`).join('');
+}
+async function createRecord(){
+  try{
+    await api('/api/records',{method:'POST',body:JSON.stringify({title:recTitle.value.trim(),status:recStatus.value,note:recNote.value.trim()})});
+    msg('recordMsg','Đã lưu nhật ký.', true);
+    recTitle.value=''; recNote.value='';
+    loadRecords();
+  }catch(e){ msg('recordMsg', e.message); }
+}
+async function loadUsers(){
+  const data=await api('/api/users');
+  usersBody.innerHTML=data.users.map(u=>`<tr><td>${u.username}</td><td>${u.role}</td><td>${u.createdAt}</td></tr>`).join('');
+}
+async function createUser(){
+  try{
+    await api('/api/users',{method:'POST',body:JSON.stringify({username:newUser.value.trim(),password:newPass.value,role:newRole.value})});
+    msg('userMsg','Đã tạo user.', true); newUser.value=''; newPass.value=''; loadUsers();
+  }catch(e){ msg('userMsg', e.message); }
+}
+async function runBackup(){
+  try{
+    const data=await api('/api/backup',{method:'POST'});
+    msg('recordMsg',`Backup xong: ${data.file}`, true);
+  }catch(e){ msg('recordMsg', e.message); }
+}
+boot();
+</script>
+</body>
+</html>

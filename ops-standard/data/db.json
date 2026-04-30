@@ -1,0 +1,38 @@
+{
+  "users": [
+    {
+      "id": "5fd3a3a8f71b237d7c3bc2585c3af7a7",
+      "username": "admin",
+      "role": "admin",
+      "createdAt": "2026-04-30T02:16:01.703Z",
+      "salt": "864228627bab6365598817c31c31d785",
+      "hash": "6c9df6c877102934945960a10661b574a65a36f15d9fc61dd913b0ae7f8e0fd1"
+    },
+    {
+      "id": "cd38b8d8c6fffd3791b603d6d14eefe9",
+      "username": "operator1",
+      "role": "operator",
+      "createdAt": "2026-04-30T02:16:08.180Z",
+      "salt": "8d3ef7115fd6fb47d06de8d78a0df969",
+      "hash": "535fdae362c0dfef61e8f5302de0941b9d0e08e306cd2b7b46a73bbbd71a112e"
+    }
+  ],
+  "records": [
+    {
+      "id": "40cf82112b315103989baeff3484f7ba",
+      "title": "Khởi tạo hệ thống",
+      "status": "open",
+      "note": "Bản local sẵn sàng vận hành.",
+      "createdBy": "system",
+      "createdAt": "2026-04-30T02:16:01.703Z"
+    },
+    {
+      "id": "6e786ebaa16cc72f2381a31c616b9230",
+      "title": "Kiểm tra bơm hồ A",
+      "status": "monitoring",
+      "note": "Lưu lượng ổn định",
+      "createdBy": "admin",
+      "createdAt": "2026-04-30T02:16:08.187Z"
+    }
+  ]
+}
