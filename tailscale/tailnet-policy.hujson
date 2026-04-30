@@ -1,0 +1,17 @@
+// Tailscale tailnet policy for external policy management
+// Start minimal for Funnel on node(s) in this tailnet.
+{
+  "nodeAttrs": [
+    {
+      // Option 1: allow all direct tailnet members to use Funnel
+      "target": ["autogroup:member"],
+      "attr": ["funnel"]
+    }
+
+    // Safer alternative example:
+    // {
+    //   "target": ["trucdienhapulico@gmail.com"],
+    //   "attr": ["funnel"]
+    // }
+  ]
+}
