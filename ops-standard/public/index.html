@@ -27,6 +27,11 @@
     .stat b{display:block;font-size:20px;margin-top:4px}
     .scroll{overflow:auto}
     details{margin-top:12px}
+    .nav{display:flex;gap:10px;flex-wrap:wrap}
+    .nav button{background:#cfd8dc;color:#102027}
+    .nav button.active{background:#00695c;color:#fff}
+    .page{display:none}
+    .page.active{display:block}
   </style>
 </head>
 <body>
@@ -53,179 +58,199 @@
     </div>
 
     <div class="card">
-      <h2>Nhật ký vận hành</h2>
-      <div class="row">
-        <input id="recTitle" placeholder="Tiêu đề công việc / sự cố">
-        <select id="recStatus">
-          <option value="open">open</option>
-          <option value="monitoring">monitoring</option>
-          <option value="closed">closed</option>
-        </select>
+      <div class="nav">
+        <button id="nav-records" onclick="showPage('records')">Nhật ký vận hành</button>
+        <button id="nav-kyson" onclick="showPage('kyson')">Dữ liệu Kyson</button>
+        <button id="nav-code" class="hidden" onclick="showPage('code')">Phiên bản code webapp</button>
+        <button id="nav-users" class="hidden" onclick="showPage('users')">Quản lý người dùng</button>
       </div>
-      <div class="row" style="margin-top:12px">
-        <textarea id="recNote" rows="4" placeholder="Ghi chú"></textarea>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <button id="saveRecordBtn" onclick="createRecord()">Lưu nhật ký</button>
-        <button class="secondary" onclick="loadRecords()">Tải lại</button>
-        <button class="secondary" onclick="window.open('/api/export?format=json','_blank')">Xuất JSON</button>
-        <button class="secondary" onclick="window.open('/api/export?format=csv','_blank')">Xuất CSV</button>
-        <button id="backupBtn" class="warn" onclick="runBackup()">Backup ngay</button>
-      </div>
-      <div id="recordMsg" class="muted"></div>
-      <table style="margin-top:12px">
-        <thead><tr><th>Thời gian</th><th>Tiêu đề</th><th>Trạng thái</th><th>Người tạo</th><th>Ghi chú</th></tr></thead>
-        <tbody id="recordsBody"></tbody>
-      </table>
     </div>
 
-    <div class="card">
-      <h2>Dữ liệu Kyson</h2>
-      <div class="row">
-        <div>
-          <div class="muted">Từ ngày</div>
-          <input id="kysonDateFrom" type="date">
+    <section id="page-records" class="page">
+      <div class="card">
+        <h2>Nhật ký vận hành</h2>
+        <div class="row">
+          <input id="recTitle" placeholder="Tiêu đề công việc / sự cố">
+          <select id="recStatus">
+            <option value="open">open</option>
+            <option value="monitoring">monitoring</option>
+            <option value="closed">closed</option>
+          </select>
         </div>
-        <div>
-          <div class="muted">Đến ngày</div>
-          <input id="kysonDateTo" type="date">
-        </div>
-        <div style="display:flex;align-items:end;gap:12px">
-          <button id="kysonSyncBtn" onclick="syncKyson()">Đồng bộ Kyson</button>
-          <button class="secondary" onclick="loadKyson()">Tải cache</button>
-        </div>
-      </div>
-      <div id="kysonMsg" class="muted" style="margin-top:10px"></div>
-
-      <details open style="margin-top:12px">
-        <summary><b>Cài đặt sync tự động</b></summary>
         <div class="row" style="margin-top:12px">
+          <textarea id="recNote" rows="4" placeholder="Ghi chú"></textarea>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="saveRecordBtn" onclick="createRecord()">Lưu nhật ký</button>
+          <button class="secondary" onclick="loadRecords()">Tải lại</button>
+          <button class="secondary" onclick="window.open('/api/export?format=json','_blank')">Xuất JSON</button>
+          <button class="secondary" onclick="window.open('/api/export?format=csv','_blank')">Xuất CSV</button>
+          <button id="backupBtn" class="warn" onclick="runBackup()">Backup ngay</button>
+        </div>
+        <div id="recordMsg" class="muted"></div>
+        <table style="margin-top:12px">
+          <thead><tr><th>Thời gian</th><th>Tiêu đề</th><th>Trạng thái</th><th>Người tạo</th><th>Ghi chú</th></tr></thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="page-kyson" class="page">
+      <div class="card">
+        <h2>Dữ liệu Kyson</h2>
+        <div class="row">
           <div>
-            <div class="muted">Bật tự động</div>
-            <select id="autoSyncEnabled">
-              <option value="true">Bật</option>
-              <option value="false">Tắt</option>
-            </select>
+            <div class="muted">Từ ngày</div>
+            <input id="kysonDateFrom" type="date">
           </div>
           <div>
-            <div class="muted">Giờ sync hằng ngày</div>
-            <input id="autoSyncTime" type="time" value="01:00">
-          </div>
-          <div>
-            <div class="muted">Múi giờ</div>
-            <select id="autoSyncTimeZone">
-              <option value="UTC">UTC</option>
-              <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (UTC+7)</option>
-            </select>
-          </div>
-          <div>
-            <div class="muted">Số ngày lấy lại</div>
-            <input id="autoSyncDaysBack" type="number" min="1" max="30" value="1">
+            <div class="muted">Đến ngày</div>
+            <input id="kysonDateTo" type="date">
           </div>
           <div style="display:flex;align-items:end;gap:12px">
-            <button id="autoSyncSaveBtn" onclick="saveAutoSyncSettings()">Lưu cài đặt</button>
+            <button id="kysonSyncBtn" onclick="syncKyson()">Đồng bộ Kyson</button>
+            <button class="secondary" onclick="loadKyson()">Tải cache</button>
           </div>
         </div>
-        <div id="autoSyncMsg" class="muted" style="margin-top:10px"></div>
-      </details>
+        <div id="kysonMsg" class="muted" style="margin-top:10px"></div>
 
-      <div class="grid" style="margin-top:12px">
-        <div class="stat"><span class="muted">Đồng bộ lúc</span><b id="kSyncedAt">Chưa có</b></div>
-        <div class="stat"><span class="muted">Auto sync</span><b id="kAutoSyncState">Tắt</b></div>
-        <div class="stat"><span class="muted">Bơm</span><b id="kPumpCount">0</b></div>
-        <div class="stat"><span class="muted">Cảm biến</span><b id="kSensorCount">0</b></div>
-        <div class="stat"><span class="muted">Trạng thái</span><b id="kStatusCount">0</b></div>
-        <div class="stat"><span class="muted">Users Kyson</span><b id="kUserCount">0</b></div>
-        <div class="stat"><span class="muted">Log Kyson</span><b id="kLogCount">0</b></div>
-        <div class="stat"><span class="muted">Báo cáo ngày</span><b id="kReportCount">0</b></div>
-        <div class="stat"><span class="muted">Tổng nước m³</span><b id="kTotalWater">0</b></div>
+        <details open style="margin-top:12px">
+          <summary><b>Cài đặt sync tự động</b></summary>
+          <div class="row" style="margin-top:12px">
+            <div>
+              <div class="muted">Bật tự động</div>
+              <select id="autoSyncEnabled">
+                <option value="true">Bật</option>
+                <option value="false">Tắt</option>
+              </select>
+            </div>
+            <div>
+              <div class="muted">Giờ sync hằng ngày</div>
+              <input id="autoSyncTime" type="time" value="01:00">
+            </div>
+            <div>
+              <div class="muted">Múi giờ</div>
+              <select id="autoSyncTimeZone">
+                <option value="UTC">UTC</option>
+                <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (UTC+7)</option>
+              </select>
+            </div>
+            <div>
+              <div class="muted">Số ngày lấy lại</div>
+              <input id="autoSyncDaysBack" type="number" min="1" max="30" value="1">
+            </div>
+            <div style="display:flex;align-items:end;gap:12px">
+              <button id="autoSyncSaveBtn" onclick="saveAutoSyncSettings()">Lưu cài đặt</button>
+            </div>
+          </div>
+          <div id="autoSyncMsg" class="muted" style="margin-top:10px"></div>
+        </details>
+
+        <div class="grid" style="margin-top:12px">
+          <div class="stat"><span class="muted">Đồng bộ lúc</span><b id="kSyncedAt">Chưa có</b></div>
+          <div class="stat"><span class="muted">Auto sync</span><b id="kAutoSyncState">Tắt</b></div>
+          <div class="stat"><span class="muted">Bơm</span><b id="kPumpCount">0</b></div>
+          <div class="stat"><span class="muted">Cảm biến</span><b id="kSensorCount">0</b></div>
+          <div class="stat"><span class="muted">Trạng thái</span><b id="kStatusCount">0</b></div>
+          <div class="stat"><span class="muted">Users Kyson</span><b id="kUserCount">0</b></div>
+          <div class="stat"><span class="muted">Log Kyson</span><b id="kLogCount">0</b></div>
+          <div class="stat"><span class="muted">Báo cáo ngày</span><b id="kReportCount">0</b></div>
+          <div class="stat"><span class="muted">Tổng nước m³</span><b id="kTotalWater">0</b></div>
+        </div>
+
+        <details open>
+          <summary><b>Báo cáo nước theo ngày</b></summary>
+          <div class="scroll">
+            <table style="margin-top:12px">
+              <thead><tr><th>Ngày</th><th>Số bơm</th><th>Tổng thời gian</th><th>Tổng m³</th></tr></thead>
+              <tbody id="kysonReportsBody"></tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary><b>Danh sách bơm</b></summary>
+          <div class="scroll">
+            <table style="margin-top:12px">
+              <thead><tr><th>ID</th><th>Tên bơm</th><th>Flow m³/h</th><th>Auto</th><th>State</th></tr></thead>
+              <tbody id="kysonPumpsBody"></tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary><b>Cảm biến</b></summary>
+          <div class="scroll">
+            <table style="margin-top:12px">
+              <thead><tr><th>ID</th><th>TID</th><th>Tên</th><th>Giá trị</th><th>Đơn vị</th><th>Cập nhật</th></tr></thead>
+              <tbody id="kysonSensorsBody"></tbody>
+            </table>
+          </div>
+        </details>
+
+        <details>
+          <summary><b>Log Kyson gần nhất</b></summary>
+          <div class="scroll">
+            <table style="margin-top:12px">
+              <thead><tr><th>Thời gian</th><th>Nội dung</th></tr></thead>
+              <tbody id="kysonLogBody"></tbody>
+            </table>
+          </div>
+        </details>
       </div>
+    </section>
 
-      <details open>
-        <summary><b>Báo cáo nước theo ngày</b></summary>
-        <div class="scroll">
-          <table style="margin-top:12px">
-            <thead><tr><th>Ngày</th><th>Số bơm</th><th>Tổng thời gian</th><th>Tổng m³</th></tr></thead>
-            <tbody id="kysonReportsBody"></tbody>
-          </table>
+    <section id="page-code" class="page">
+      <div id="codeBackupCard" class="card hidden">
+        <h2>Phiên bản code webapp</h2>
+        <div class="row">
+          <div>
+            <div class="muted">Phiên bản hiện tại</div>
+            <code id="appVersionDetail">-</code>
+          </div>
+          <div>
+            <div class="muted">Nhãn snapshot mới</div>
+            <input id="codeBackupLabel" placeholder="vd: truoc-khi-sua-giao-dien">
+          </div>
+          <div style="display:flex;align-items:end;gap:12px">
+            <button id="codeBackupBtn" onclick="createCodeBackupSnapshot()">Tạo snapshot code</button>
+            <button class="secondary" onclick="loadCodeBackups()">Tải danh sách</button>
+          </div>
         </div>
-      </details>
-
-      <details>
-        <summary><b>Danh sách bơm</b></summary>
-        <div class="scroll">
-          <table style="margin-top:12px">
-            <thead><tr><th>ID</th><th>Tên bơm</th><th>Flow m³/h</th><th>Auto</th><th>State</th></tr></thead>
-            <tbody id="kysonPumpsBody"></tbody>
-          </table>
-        </div>
-      </details>
-
-      <details>
-        <summary><b>Cảm biến</b></summary>
-        <div class="scroll">
-          <table style="margin-top:12px">
-            <thead><tr><th>ID</th><th>TID</th><th>Tên</th><th>Giá trị</th><th>Đơn vị</th><th>Cập nhật</th></tr></thead>
-            <tbody id="kysonSensorsBody"></tbody>
-          </table>
-        </div>
-      </details>
-
-      <details>
-        <summary><b>Log Kyson gần nhất</b></summary>
-        <div class="scroll">
-          <table style="margin-top:12px">
-            <thead><tr><th>Thời gian</th><th>Nội dung</th></tr></thead>
-            <tbody id="kysonLogBody"></tbody>
-          </table>
-        </div>
-      </details>
-    </div>
-
-    <div id="codeBackupCard" class="card hidden">
-      <h2>Phiên bản code webapp</h2>
-      <div class="row">
-        <div>
-          <div class="muted">Phiên bản hiện tại</div>
-          <code id="appVersionDetail">-</code>
-        </div>
-        <div>
-          <div class="muted">Nhãn snapshot mới</div>
-          <input id="codeBackupLabel" placeholder="vd: truoc-khi-sua-giao-dien">
-        </div>
-        <div style="display:flex;align-items:end;gap:12px">
-          <button id="codeBackupBtn" onclick="createCodeBackupSnapshot()">Tạo snapshot code</button>
-          <button class="secondary" onclick="loadCodeBackups()">Tải danh sách</button>
-        </div>
+        <div id="codeBackupMsg" class="muted" style="margin-top:10px"></div>
+        <table style="margin-top:12px">
+          <thead><tr><th>Thời gian</th><th>Tên snapshot</th><th>Label</th><th>Git commit</th><th>Khôi phục</th></tr></thead>
+          <tbody id="codeBackupsBody"></tbody>
+        </table>
       </div>
-      <div id="codeBackupMsg" class="muted" style="margin-top:10px"></div>
-      <table style="margin-top:12px">
-        <thead><tr><th>Thời gian</th><th>Tên snapshot</th><th>Label</th><th>Git commit</th><th>Khôi phục</th></tr></thead>
-        <tbody id="codeBackupsBody"></tbody>
-      </table>
-    </div>
+    </section>
 
-    <div id="usersCard" class="card hidden">
-      <h2>Quản lý người dùng</h2>
-      <div class="row">
-        <input id="newUser" placeholder="username">
-        <input id="newPass" placeholder="password" type="password">
-        <select id="newRole">
-          <option value="viewer">viewer</option>
-          <option value="operator">operator</option>
-          <option value="admin">admin</option>
-        </select>
-        <button onclick="createUser()">Tạo user</button>
+    <section id="page-users" class="page">
+      <div id="usersCard" class="card hidden">
+        <h2>Quản lý người dùng</h2>
+        <div class="row">
+          <input id="newUser" placeholder="username">
+          <input id="newPass" placeholder="password" type="password">
+          <select id="newRole">
+            <option value="viewer">viewer</option>
+            <option value="operator">operator</option>
+            <option value="admin">admin</option>
+          </select>
+          <button onclick="createUser()">Tạo user</button>
+        </div>
+        <div id="userMsg" class="muted" style="margin-top:10px"></div>
+        <table style="margin-top:12px">
+          <thead><tr><th>User</th><th>Vai trò</th><th>Tạo lúc</th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
       </div>
-      <div id="userMsg" class="muted" style="margin-top:10px"></div>
-      <table style="margin-top:12px">
-        <thead><tr><th>User</th><th>Vai trò</th><th>Tạo lúc</th></tr></thead>
-        <tbody id="usersBody"></tbody>
-      </table>
-    </div>
+    </section>
   </div>
 
 <script>
+const PAGE_IDS = ['records','kyson','code','users'];
+let currentUserRole = null;
+
 async function api(path, opts={}){
   const res = await fetch(path, {headers:{'Content-Type':'application/json'}, credentials:'same-origin', ...opts});
   const text = await res.text();
@@ -251,6 +276,21 @@ function fillTimeZoneOptions(list=[]){
   const uniq = [...new Set(['UTC','Asia/Ho_Chi_Minh', ...list.filter(Boolean)])];
   autoSyncTimeZone.innerHTML = uniq.map(tz => `<option value="${esc(tz)}">${esc(tz === 'Asia/Ho_Chi_Minh' ? 'Asia/Ho_Chi_Minh (UTC+7)' : tz)}</option>`).join('');
   autoSyncTimeZone.value = uniq.includes(current) ? current : 'UTC';
+}
+function showPage(page){
+  const allowed = new Set(['records','kyson']);
+  if(currentUserRole === 'admin'){ allowed.add('code'); allowed.add('users'); }
+  if(!allowed.has(page)) page = 'records';
+  PAGE_IDS.forEach(id => {
+    document.getElementById(`page-${id}`).classList.toggle('active', id === page);
+    const nav = document.getElementById(`nav-${id}`);
+    if(nav) nav.classList.toggle('active', id === page);
+  });
+  location.hash = page;
+}
+function initialPage(){
+  const hash = location.hash.replace('#','');
+  return PAGE_IDS.includes(hash) ? hash : 'records';
 }
 function renderAutoSync(autoSync={}, scheduler={}, supportedTimeZones=[]){
   fillTimeZoneOptions(supportedTimeZones);
@@ -278,12 +318,15 @@ async function logout(){ await api('/api/logout',{method:'POST'}); location.relo
 async function boot(){
   try{
     const me=await api('/api/me');
+    currentUserRole = me.role;
     document.getElementById('loginCard').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('meName').textContent=me.username;
     document.getElementById('meRole').textContent=me.role;
     const admin=me.role==='admin';
     const canWrite=me.role==='admin'||me.role==='operator';
+    document.getElementById('nav-users').classList.toggle('hidden', !admin);
+    document.getElementById('nav-code').classList.toggle('hidden', !admin);
     document.getElementById('usersCard').classList.toggle('hidden', !admin);
     document.getElementById('codeBackupCard').classList.toggle('hidden', !admin);
     document.getElementById('backupBtn').disabled=!admin;
@@ -298,6 +341,7 @@ async function boot(){
     if(admin) loadUsers();
     setTodayInputs();
     await Promise.all([loadAppInfo(), loadRecords(), loadKyson(), loadAutoSyncSettings(), admin ? loadCodeBackups() : Promise.resolve()]);
+    showPage(initialPage());
   }catch{}
 }
 async function loadRecords(){
@@ -323,7 +367,7 @@ async function loadCodeBackups(){
     const data = await api('/api/code-backups');
     setAppVersion(data.app || {});
     codeBackupsBody.innerHTML = (data.snapshots || []).length
-      ? data.snapshots.map(x => `<tr><td>${esc(x.createdAt)}</td><td>${esc(x.name)}</td><td>${esc(x.label)}</td><td>${esc(x.gitCommit)}</td><td><button class="secondary" onclick="restoreCodeBackupSnapshot('${esc(x.name)}')">Khôi phục</button></td></tr>`).join('')
+      ? data.snapshots.map(x => `<tr><td>${esc(x.createdAt)}</td><td>${esc(x.name)}</td><td>${esc(x.label)}</td><td>${esc(x.gitCommit)}</td><td><button class="secondary" onclick="restoreCodeBackupSnapshot('${x.name}')">Khôi phục</button></td></tr>`).join('')
       : '<tr><td colspan="5" class="muted">Chưa có snapshot code.</td></tr>';
     msg('codeBackupMsg', `Đã nạp ${data.snapshots?.length || 0} snapshot code.`, true);
   }catch(e){ msg('codeBackupMsg', e.message); }
@@ -442,6 +486,7 @@ async function syncKyson(){
   }catch(e){ msg('kysonMsg', e.message); }
   finally{ kysonSyncBtn.disabled = false; }
 }
+window.addEventListener('hashchange', () => showPage(initialPage()));
 loadAppInfo();
 boot();
 </script>
