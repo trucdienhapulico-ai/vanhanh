@@ -1,0 +1,21 @@
+# Runtime / local workspace state
+.openclaw/
+state/*
+tmp/*
+memory/*.md
+
+# Node / editor
+node_modules/
+*.log
+.DS_Store
+
+# Internal webapp runtime data
+ops-standard/backups/*
+ops-standard/data/*.json
+
+# Keep empty directories when needed
+!memory/.gitkeep
+!state/.gitkeep
+!tmp/.gitkeep
+!ops-standard/backups/.gitkeep
+!ops-standard/data/.gitkeep
