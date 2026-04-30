@@ -200,7 +200,7 @@
       </div>
       <div id="codeBackupMsg" class="muted" style="margin-top:10px"></div>
       <table style="margin-top:12px">
-        <thead><tr><th>Thời gian</th><th>Tên snapshot</th><th>Label</th><th>Git commit</th></tr></thead>
+        <thead><tr><th>Thời gian</th><th>Tên snapshot</th><th>Label</th><th>Git commit</th><th>Khôi phục</th></tr></thead>
         <tbody id="codeBackupsBody"></tbody>
       </table>
     </div>
@@ -323,8 +323,8 @@ async function loadCodeBackups(){
     const data = await api('/api/code-backups');
     setAppVersion(data.app || {});
     codeBackupsBody.innerHTML = (data.snapshots || []).length
-      ? data.snapshots.map(x => `<tr><td>${esc(x.createdAt)}</td><td>${esc(x.name)}</td><td>${esc(x.label)}</td><td>${esc(x.gitCommit)}</td></tr>`).join('')
-      : '<tr><td colspan="4" class="muted">Chưa có snapshot code.</td></tr>';
+      ? data.snapshots.map(x => `<tr><td>${esc(x.createdAt)}</td><td>${esc(x.name)}</td><td>${esc(x.label)}</td><td>${esc(x.gitCommit)}</td><td><button class="secondary" onclick="restoreCodeBackupSnapshot('${esc(x.name)}')">Khôi phục</button></td></tr>`).join('')
+      : '<tr><td colspan="5" class="muted">Chưa có snapshot code.</td></tr>';
     msg('codeBackupMsg', `Đã nạp ${data.snapshots?.length || 0} snapshot code.`, true);
   }catch(e){ msg('codeBackupMsg', e.message); }
 }
@@ -338,6 +338,15 @@ async function createCodeBackupSnapshot(){
     await loadCodeBackups();
   }catch(e){ msg('codeBackupMsg', e.message); }
   finally{ codeBackupBtn.disabled = false; }
+}
+async function restoreCodeBackupSnapshot(name){
+  try{
+    if(!confirm(`Khôi phục code về snapshot ${name}?\n\nHệ thống sẽ tạo thêm bản pre-restore an toàn trước khi ghi đè code.`)) return;
+    msg('codeBackupMsg', `Đang khôi phục snapshot ${name}...`);
+    const data = await api('/api/code-backups/restore', {method:'POST', body:JSON.stringify({name})});
+    msg('codeBackupMsg', `${data.note} Snapshot: ${data.restored}`, true);
+    await loadCodeBackups();
+  }catch(e){ msg('codeBackupMsg', e.message); }
 }
 async function loadUsers(){
   const data=await api('/api/users');

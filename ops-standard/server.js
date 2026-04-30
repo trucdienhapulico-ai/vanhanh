@@ -15,6 +15,7 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const VERSION_STORE_DIR = path.join(ROOT, '..', 'state', 'webapp-versions');
 const CODE_BACKUP_SCRIPT = path.join(ROOT, '..', 'scripts', 'webapp-backup-version.sh');
+const CODE_RESTORE_SCRIPT = path.join(ROOT, '..', 'scripts', 'webapp-restore-version.sh');
 const sessions = new Map();
 let schedulerTimer = null;
 let schedulerState = { running: false };
@@ -230,6 +231,13 @@ function createCodeBackup(label = 'manual-ui') {
   const backups = listCodeBackups();
   return { output, latest: backups[0] || null };
 }
+function restoreCodeBackup(name) {
+  const output = execFileSync(CODE_RESTORE_SCRIPT, [name], { cwd: path.join(ROOT, '..') }).toString();
+  return {
+    output,
+    note: 'Code đã được khôi phục trên đĩa. Cần restart ops-standard.service để áp dụng bản restore.',
+  };
+}
 async function syncKyson(body = {}) {
   const from = normalizeDate(body.dateFrom) || today();
   const to = normalizeDate(body.dateTo) || from;
@@ -442,6 +450,15 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       const result = createCodeBackup(body.label || `manual-${me.username}`);
       return send(res, 200, { ok: true, app: APP_INFO, snapshot: result.latest, output: result.output });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/code-backups/restore') {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin'], res)) return;
+      const body = await parseBody(req);
+      if (!body.name) return send(res, 400, { error: 'Thiếu tên snapshot cần khôi phục' });
+      const result = restoreCodeBackup(body.name);
+      return send(res, 200, { ok: true, restored: body.name, note: result.note, output: result.output });
     }
 
     if (req.method === 'GET' && url.pathname === '/api/users') {

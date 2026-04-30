@@ -37,6 +37,7 @@ bash scripts/webapp-backup-version.sh <label>
 - mở mục **Phiên bản code webapp**
 - nhập nhãn snapshot
 - bấm **Tạo snapshot code**
+- có thể bấm **Khôi phục** ở từng dòng snapshot để quay lại bản cũ
 
 Ví dụ:
 ```bash
@@ -82,7 +83,7 @@ Khi restore, script sẽ tự tạo thêm 1 snapshot an toàn với nhãn:
 ---
 
 ## Sau khi khôi phục
-Nếu webapp đang chạy bằng service:
+Nếu khôi phục từ nút admin hoặc từ script, cần restart service để bản code restored được áp dụng:
 ```bash
 systemctl restart ops-standard.service
 ```
