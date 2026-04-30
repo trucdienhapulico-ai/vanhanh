@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ops Standard Local</title>
   <style>
-    body{font-family:system-ui,-apple-system,sans-serif;max-width:1280px;margin:0 auto;padding:24px;background:#f4f7f8;color:#102027}
+    body{font-family:system-ui,-apple-system,sans-serif;max-width:1440px;margin:0 auto;padding:24px;background:#f4f7f8;color:#102027}
     .card{background:#fff;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 12px rgba(0,0,0,.06)}
     h1,h2,h3{margin:0 0 12px}
     input,select,button,textarea{padding:10px;border:1px solid #cfd8dc;border-radius:10px;font:inherit}
@@ -27,11 +27,20 @@
     .stat b{display:block;font-size:20px;margin-top:4px}
     .scroll{overflow:auto}
     details{margin-top:12px}
-    .nav{display:flex;gap:10px;flex-wrap:wrap}
-    .nav button{background:#cfd8dc;color:#102027}
-    .nav button.active{background:#00695c;color:#fff}
+    .layout{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start}
+    .sidebar{position:sticky;top:24px}
+    .nav{display:flex;flex-direction:column;gap:10px}
+    .nav button{background:#eceff1;color:#102027;text-align:left;padding:12px 14px;border:1px solid #cfd8dc}
+    .nav button.active{background:#00695c;color:#fff;border-color:#00695c}
     .page{display:none}
     .page.active{display:block}
+    .content-area{min-width:0}
+    @media (max-width: 900px){
+      .layout{grid-template-columns:1fr}
+      .sidebar{position:static}
+      .nav{flex-direction:row;flex-wrap:wrap}
+      .nav button{flex:1;min-width:180px}
+    }
   </style>
 </head>
 <body>
@@ -57,15 +66,20 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="nav">
-        <button id="nav-records" onclick="showPage('records')">Nhật ký vận hành</button>
-        <button id="nav-kyson" onclick="showPage('kyson')">Dữ liệu Kyson</button>
-        <button id="nav-code" class="hidden" onclick="showPage('code')">Phiên bản code webapp</button>
-        <button id="nav-users" class="hidden" onclick="showPage('users')">Quản lý người dùng</button>
-      </div>
-    </div>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="card">
+          <h2>Điều hướng</h2>
+          <div class="nav">
+            <button id="nav-records" onclick="showPage('records')">Nhật ký vận hành</button>
+            <button id="nav-kyson" onclick="showPage('kyson')">Dữ liệu Kyson</button>
+            <button id="nav-code" class="hidden" onclick="showPage('code')">Phiên bản code webapp</button>
+            <button id="nav-users" class="hidden" onclick="showPage('users')">Quản lý người dùng</button>
+          </div>
+        </div>
+      </aside>
 
+      <main class="content-area">
     <section id="page-records" class="page">
       <div class="card">
         <h2>Nhật ký vận hành</h2>
@@ -245,6 +259,8 @@
         </table>
       </div>
     </section>
+      </main>
+    </div>
   </div>
 
 <script>
