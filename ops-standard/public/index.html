@@ -5,27 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ops Standard Local</title>
   <style>
-    body{font-family:system-ui,-apple-system,sans-serif;max-width:1100px;margin:0 auto;padding:24px;background:#f4f7f8;color:#102027}
+    body{font-family:system-ui,-apple-system,sans-serif;max-width:1280px;margin:0 auto;padding:24px;background:#f4f7f8;color:#102027}
     .card{background:#fff;border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-    h1,h2{margin:0 0 12px}
+    h1,h2,h3{margin:0 0 12px}
     input,select,button,textarea{padding:10px;border:1px solid #cfd8dc;border-radius:10px;font:inherit}
     button{cursor:pointer;background:#00695c;color:#fff;border:none}
     button.secondary{background:#455a64}
     button.warn{background:#b71c1c}
+    button:disabled{opacity:.55;cursor:not-allowed}
     .row{display:flex;gap:12px;flex-wrap:wrap}
     .row>*{flex:1}
     table{width:100%;border-collapse:collapse}
-    th,td{padding:8px;border-bottom:1px solid #eceff1;text-align:left}
+    th,td{padding:8px;border-bottom:1px solid #eceff1;text-align:left;vertical-align:top}
     .hidden{display:none}
     .muted{color:#607d8b}
     .ok{color:#1b5e20}
     .err{color:#b71c1c}
     code{background:#eceff1;padding:2px 6px;border-radius:6px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .stat{background:#eef7f6;border-radius:12px;padding:12px}
+    .stat b{display:block;font-size:20px;margin-top:4px}
+    .scroll{overflow:auto}
+    details{margin-top:12px}
   </style>
 </head>
 <body>
   <h1>Ops Standard Local</h1>
-  <div class="muted">Đăng nhập • Phân quyền • Backup • Xuất file</div>
+  <div class="muted">Đăng nhập • Phân quyền • Backup • Xuất file • Tích hợp Kyson</div>
 
   <div id="loginCard" class="card">
     <h2>Đăng nhập</h2>
@@ -73,6 +79,102 @@
       </table>
     </div>
 
+    <div class="card">
+      <h2>Dữ liệu Kyson</h2>
+      <div class="row">
+        <div>
+          <div class="muted">Từ ngày</div>
+          <input id="kysonDateFrom" type="date">
+        </div>
+        <div>
+          <div class="muted">Đến ngày</div>
+          <input id="kysonDateTo" type="date">
+        </div>
+        <div style="display:flex;align-items:end;gap:12px">
+          <button id="kysonSyncBtn" onclick="syncKyson()">Đồng bộ Kyson</button>
+          <button class="secondary" onclick="loadKyson()">Tải cache</button>
+        </div>
+      </div>
+      <div id="kysonMsg" class="muted" style="margin-top:10px"></div>
+
+      <details open style="margin-top:12px">
+        <summary><b>Cài đặt sync tự động</b></summary>
+        <div class="row" style="margin-top:12px">
+          <div>
+            <div class="muted">Bật tự động</div>
+            <select id="autoSyncEnabled">
+              <option value="true">Bật</option>
+              <option value="false">Tắt</option>
+            </select>
+          </div>
+          <div>
+            <div class="muted">Giờ sync hằng ngày (UTC)</div>
+            <input id="autoSyncTime" type="time" value="01:00">
+          </div>
+          <div>
+            <div class="muted">Số ngày lấy lại</div>
+            <input id="autoSyncDaysBack" type="number" min="1" max="30" value="1">
+          </div>
+          <div style="display:flex;align-items:end;gap:12px">
+            <button id="autoSyncSaveBtn" onclick="saveAutoSyncSettings()">Lưu cài đặt</button>
+          </div>
+        </div>
+        <div id="autoSyncMsg" class="muted" style="margin-top:10px"></div>
+      </details>
+
+      <div class="grid" style="margin-top:12px">
+        <div class="stat"><span class="muted">Đồng bộ lúc</span><b id="kSyncedAt">Chưa có</b></div>
+        <div class="stat"><span class="muted">Auto sync</span><b id="kAutoSyncState">Tắt</b></div>
+        <div class="stat"><span class="muted">Bơm</span><b id="kPumpCount">0</b></div>
+        <div class="stat"><span class="muted">Cảm biến</span><b id="kSensorCount">0</b></div>
+        <div class="stat"><span class="muted">Trạng thái</span><b id="kStatusCount">0</b></div>
+        <div class="stat"><span class="muted">Users Kyson</span><b id="kUserCount">0</b></div>
+        <div class="stat"><span class="muted">Log Kyson</span><b id="kLogCount">0</b></div>
+        <div class="stat"><span class="muted">Báo cáo ngày</span><b id="kReportCount">0</b></div>
+        <div class="stat"><span class="muted">Tổng nước m³</span><b id="kTotalWater">0</b></div>
+      </div>
+
+      <details open>
+        <summary><b>Báo cáo nước theo ngày</b></summary>
+        <div class="scroll">
+          <table style="margin-top:12px">
+            <thead><tr><th>Ngày</th><th>Số bơm</th><th>Tổng thời gian</th><th>Tổng m³</th></tr></thead>
+            <tbody id="kysonReportsBody"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details>
+        <summary><b>Danh sách bơm</b></summary>
+        <div class="scroll">
+          <table style="margin-top:12px">
+            <thead><tr><th>ID</th><th>Tên bơm</th><th>Flow m³/h</th><th>Auto</th><th>State</th></tr></thead>
+            <tbody id="kysonPumpsBody"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details>
+        <summary><b>Cảm biến</b></summary>
+        <div class="scroll">
+          <table style="margin-top:12px">
+            <thead><tr><th>ID</th><th>TID</th><th>Tên</th><th>Giá trị</th><th>Đơn vị</th><th>Cập nhật</th></tr></thead>
+            <tbody id="kysonSensorsBody"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <details>
+        <summary><b>Log Kyson gần nhất</b></summary>
+        <div class="scroll">
+          <table style="margin-top:12px">
+            <thead><tr><th>Thời gian</th><th>Nội dung</th></tr></thead>
+            <tbody id="kysonLogBody"></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
     <div id="usersCard" class="card hidden">
       <h2>Quản lý người dùng</h2>
       <div class="row">
@@ -102,6 +204,24 @@ async function api(path, opts={}){
   return data;
 }
 function msg(id, text, ok=false){ const el=document.getElementById(id); el.textContent=text; el.className=ok?'ok':'err'; }
+function safe(v){ return v==null || v==='' ? '-' : String(v); }
+function esc(v){ return safe(v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+function setTodayInputs(){
+  const d = new Date().toISOString().slice(0,10);
+  kysonDateFrom.value = d;
+  kysonDateTo.value = d;
+}
+function renderAutoSync(autoSync={}, scheduler={}){
+  autoSyncEnabled.value = String(!!autoSync.enabled);
+  autoSyncTime.value = autoSync.time || '01:00';
+  autoSyncDaysBack.value = autoSync.daysBack || 1;
+  const state = scheduler.running ? 'Đang chạy' : (autoSync.enabled ? `Bật ${autoSync.time} UTC` : 'Tắt');
+  kAutoSyncState.textContent = state;
+  const lastRun = autoSync.lastRunAt ? `Lần cuối: ${autoSync.lastRunAt}` : 'Chưa chạy tự động lần nào.';
+  const lastError = autoSync.lastError ? ` Lỗi cuối: ${autoSync.lastError}` : '';
+  autoSyncMsg.textContent = `${lastRun} ${lastError}`.trim();
+  autoSyncMsg.className = autoSync.lastError ? 'err' : 'muted';
+}
 async function login(){
   try{
     const username=document.getElementById('loginUser').value.trim();
@@ -124,13 +244,19 @@ async function boot(){
     document.getElementById('usersCard').classList.toggle('hidden', !admin);
     document.getElementById('backupBtn').disabled=!admin;
     document.getElementById('saveRecordBtn').disabled=!canWrite;
+    document.getElementById('kysonSyncBtn').disabled=!canWrite;
+    document.getElementById('autoSyncSaveBtn').disabled=!admin;
+    document.getElementById('autoSyncEnabled').disabled=!admin;
+    document.getElementById('autoSyncTime').disabled=!admin;
+    document.getElementById('autoSyncDaysBack').disabled=!admin;
     if(admin) loadUsers();
-    loadRecords();
+    setTodayInputs();
+    await Promise.all([loadRecords(), loadKyson(), loadAutoSyncSettings()]);
   }catch{}
 }
 async function loadRecords(){
   const data=await api('/api/records');
-  document.getElementById('recordsBody').innerHTML = data.records.slice().reverse().map(r=>`<tr><td>${r.createdAt}</td><td>${r.title}</td><td>${r.status}</td><td>${r.createdBy}</td><td>${r.note||''}</td></tr>`).join('');
+  document.getElementById('recordsBody').innerHTML = data.records.slice().reverse().map(r=>`<tr><td>${esc(r.createdAt)}</td><td>${esc(r.title)}</td><td>${esc(r.status)}</td><td>${esc(r.createdBy)}</td><td>${esc(r.note||'')}</td></tr>`).join('');
 }
 async function createRecord(){
   try{
@@ -142,7 +268,7 @@ async function createRecord(){
 }
 async function loadUsers(){
   const data=await api('/api/users');
-  usersBody.innerHTML=data.users.map(u=>`<tr><td>${u.username}</td><td>${u.role}</td><td>${u.createdAt}</td></tr>`).join('');
+  usersBody.innerHTML=data.users.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.role)}</td><td>${esc(u.createdAt)}</td></tr>`).join('');
 }
 async function createUser(){
   try{
@@ -155,6 +281,83 @@ async function runBackup(){
     const data=await api('/api/backup',{method:'POST'});
     msg('recordMsg',`Backup xong: ${data.file}`, true);
   }catch(e){ msg('recordMsg', e.message); }
+}
+function renderKyson(kyson={}, scheduler={}){
+  const snapshot = kyson.snapshot || {};
+  const pumps = snapshot.pump || [];
+  const sensors = snapshot.sensor || [];
+  const statuses = snapshot.status || [];
+  const users = kyson.users || [];
+  const logs = kyson.log || [];
+  const reports = kyson.reports || {};
+  const reportRows = Object.entries(reports).sort((a,b)=>b[0].localeCompare(a[0]));
+  const totalWater = reportRows.reduce((sum,[,r])=>sum + Number(r.total_m3 || 0), 0);
+
+  kSyncedAt.textContent = kyson.syncedAt || 'Chưa có';
+  kAutoSyncState.textContent = scheduler.running ? 'Đang chạy' : ((kyson.autoSync && kyson.autoSync.enabled) ? `Bật ${kyson.autoSync.time} UTC` : 'Tắt');
+  kPumpCount.textContent = pumps.length;
+  kSensorCount.textContent = sensors.length;
+  kStatusCount.textContent = statuses.length;
+  kUserCount.textContent = users.length;
+  kLogCount.textContent = logs.length;
+  kReportCount.textContent = reportRows.length;
+  kTotalWater.textContent = Math.round(totalWater * 100) / 100;
+
+  kysonReportsBody.innerHTML = reportRows.length
+    ? reportRows.map(([date,report])=>`<tr><td>${esc(date)}</td><td>${esc(report.pump_count)}</td><td>${esc(report.total_duration_hms)}</td><td>${esc(report.total_m3)}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="muted">Chưa có dữ liệu báo cáo ngày.</td></tr>';
+
+  kysonPumpsBody.innerHTML = pumps.length
+    ? pumps.map(p=>`<tr><td>${esc(p.id)}</td><td>${esc(p.name)}</td><td>${esc(p.flow)}</td><td>${esc(p.auto)}</td><td>${esc(p.state)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Chưa có dữ liệu bơm.</td></tr>';
+
+  kysonSensorsBody.innerHTML = sensors.length
+    ? sensors.map(s=>`<tr><td>${esc(s.id)}</td><td>${esc(s.tid)}</td><td>${esc(s.name)}</td><td>${esc(s.value)}</td><td>${esc(s.unit)}</td><td>${esc(s.ss)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="muted">Chưa có dữ liệu cảm biến.</td></tr>';
+
+  kysonLogBody.innerHTML = logs.length
+    ? logs.slice().reverse().slice(0,100).map(item=>`<tr><td>${esc(item.time || item.createdAt || item.ss)}</td><td>${esc(item.msg || item.note || JSON.stringify(item))}</td></tr>`).join('')
+    : '<tr><td colspan="2" class="muted">Chưa có log Kyson.</td></tr>';
+}
+async function loadKyson(){
+  try{
+    const data = await api('/api/kyson');
+    renderKyson(data.kyson || {}, data.scheduler || {});
+    renderAutoSync((data.kyson || {}).autoSync || {}, data.scheduler || {});
+    msg('kysonMsg', data.kyson?.syncedAt ? `Đã nạp cache Kyson: ${data.kyson.syncedAt}` : 'Chưa đồng bộ Kyson lần nào.', !!data.kyson?.syncedAt);
+  }catch(e){ msg('kysonMsg', e.message); }
+}
+async function loadAutoSyncSettings(){
+  try{
+    const data = await api('/api/kyson/auto-sync');
+    renderAutoSync(data.autoSync || {}, data.scheduler || {});
+  }catch(e){ msg('autoSyncMsg', e.message); }
+}
+async function saveAutoSyncSettings(){
+  try{
+    const enabled = autoSyncEnabled.value === 'true';
+    const time = autoSyncTime.value;
+    const daysBack = Number(autoSyncDaysBack.value || 1);
+    autoSyncSaveBtn.disabled = true;
+    const data = await api('/api/kyson/auto-sync', {method:'POST', body:JSON.stringify({enabled, time, daysBack})});
+    renderAutoSync(data.autoSync || {}, {});
+    msg('autoSyncMsg', `Đã lưu lịch sync: ${enabled ? `${time} UTC, lấy lại ${daysBack} ngày` : 'tắt tự động'}.`, true);
+    await loadKyson();
+  }catch(e){ msg('autoSyncMsg', e.message); }
+  finally{ autoSyncSaveBtn.disabled = false; }
+}
+async function syncKyson(){
+  try{
+    const dateFrom = kysonDateFrom.value;
+    const dateTo = kysonDateTo.value;
+    if(!dateFrom || !dateTo) throw new Error('Thiếu khoảng ngày');
+    kysonSyncBtn.disabled = true;
+    msg('kysonMsg','Đang đồng bộ dữ liệu Kyson...');
+    const data = await api('/api/kyson/sync',{method:'POST',body:JSON.stringify({dateFrom, dateTo})});
+    msg('kysonMsg',`Đồng bộ xong ${data.range.from} → ${data.range.to}. Bơm: ${data.counts.pumps}, cảm biến: ${data.counts.sensors}, báo cáo ngày: ${data.counts.reports}.`, true);
+    await loadKyson();
+  }catch(e){ msg('kysonMsg', e.message); }
+  finally{ kysonSyncBtn.disabled = false; }
 }
 boot();
 </script>

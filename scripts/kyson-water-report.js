@@ -87,16 +87,28 @@ function buildDailyReport(date, rows, pumps) {
   };
 }
 
-(async () => {
-  try {
-    const client = new KysonClient();
-    const login = await client.login();
-    const report = await client.getReport(DATE);
-    const pumps = new Map((login.pump || []).map(p => [Number(p.id), p]));
-    const output = buildDailyReport(DATE, report.data || [], pumps);
-    console.log(JSON.stringify(output, null, 2));
-  } catch (err) {
-    console.error('ERROR:', err.message);
-    process.exit(1);
-  }
-})();
+async function generateDailyReport(date, client = new KysonClient()) {
+  const login = await client.login();
+  const report = await client.getReport(date);
+  const pumps = new Map((login.pump || []).map(p => [Number(p.id), p]));
+  return buildDailyReport(date, report.data || [], pumps);
+}
+
+module.exports = {
+  secondsBetween,
+  formatDuration,
+  buildDailyReport,
+  generateDailyReport,
+};
+
+if (require.main === module) {
+  (async () => {
+    try {
+      const output = await generateDailyReport(DATE);
+      console.log(JSON.stringify(output, null, 2));
+    } catch (err) {
+      console.error('ERROR:', err.message);
+      process.exit(1);
+    }
+  })();
+}

@@ -8,6 +8,9 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 - Quản lý record nội bộ
 - Backup dữ liệu nội bộ
 - Xuất file JSON / CSV
+- Đồng bộ dữ liệu Kyson vào webapp nội bộ
+- Xem nhanh bơm / cảm biến / log / báo cáo nước theo ngày
+- Cài lịch sync tự động hằng ngày ngay trong webapp
 
 ## Cấu trúc chính
 - `server.js` — web server Node.js
@@ -20,6 +23,13 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 cd /root/.openclaw/workspace/ops-standard
 npm start
 ```
+
+## Biến môi trường cho tích hợp Kyson
+- `KYSON_BASE_URL`
+- `KYSON_UID`
+- `KYSON_PWD`
+
+Nếu không khai báo, app sẽ dùng mặc định đang có trong `scripts/kyson-client.js`.
 
 Mặc định app dùng:
 - `PORT=3080`
@@ -141,6 +151,32 @@ journalctl -u ops-standard.service -f
 ```
 
 ---
+
+## Đồng bộ Kyson trong webapp
+Sau khi đăng nhập:
+- mở thẻ **Dữ liệu Kyson**
+- chọn `Từ ngày` và `Đến ngày`
+- bấm **Đồng bộ Kyson**
+
+### Sync tự động
+Trong cùng thẻ có mục **Cài đặt sync tự động**:
+- bật / tắt auto sync
+- chọn giờ chạy hằng ngày
+- chọn `Số ngày lấy lại`
+
+Giờ hiện dùng theo **UTC** của máy chủ.
+Ví dụ:
+- `01:00`, `1 ngày` → mỗi ngày sync dữ liệu của đúng hôm đó
+- `01:00`, `3 ngày` → mỗi ngày sync lại 3 ngày gần nhất
+
+App sẽ lưu cache nội bộ vào `data/db.json`, gồm:
+- snapshot hiện tại: pump / sensor / status / setting / grafana
+- users Kyson
+- log Kyson
+- báo cáo nước theo từng ngày trong khoảng đã chọn
+- trạng thái lịch auto sync: bật/tắt, giờ chạy, lần chạy cuối, lỗi cuối nếu có
+
+Điều này giúp đội vận hành xem lại dữ liệu ngay trong webapp mà không cần gọi script tay mỗi lần.
 
 # Dữ liệu và backup
 

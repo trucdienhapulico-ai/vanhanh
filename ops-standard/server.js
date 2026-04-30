@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { URL } = require('url');
+const { KysonClient } = require('../scripts/kyson-client');
+const { generateDailyReport } = require('../scripts/kyson-water-report');
 
 const PORT = Number(process.env.PORT || 3080);
 const ROOT = __dirname;
@@ -11,11 +13,64 @@ const BACKUP_DIR = path.join(ROOT, 'backups');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const sessions = new Map();
+let schedulerTimer = null;
+let schedulerState = { running: false };
 
 for (const dir of [DATA_DIR, BACKUP_DIR, PUBLIC_DIR]) fs.mkdirSync(dir, { recursive: true });
 
 function now() { return new Date().toISOString(); }
+function today() { return now().slice(0, 10); }
 function rid() { return crypto.randomBytes(16).toString('hex'); }
+function normalizeDate(value) {
+  if (!value) return null;
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? String(value) : null;
+}
+function listDates(from, to) {
+  const out = [];
+  let cur = new Date(`${from}T00:00:00Z`);
+  const end = new Date(`${to}T00:00:00Z`);
+  while (cur <= end) {
+    out.push(cur.toISOString().slice(0, 10));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return out;
+}
+function shiftDate(date, deltaDays) {
+  const cur = new Date(`${date}T00:00:00Z`);
+  cur.setUTCDate(cur.getUTCDate() + deltaDays);
+  return cur.toISOString().slice(0, 10);
+}
+function normalizeTime(value) {
+  if (!value) return null;
+  const text = String(value);
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(text) ? text : null;
+}
+function defaultKysonAutoSync() {
+  return {
+    enabled: false,
+    time: '01:00',
+    daysBack: 1,
+    lastRunAt: null,
+    lastRange: null,
+    lastStatus: 'idle',
+    lastError: null,
+  };
+}
+function normalizeAutoSync(input = {}) {
+  const base = { ...defaultKysonAutoSync(), ...(input || {}) };
+  const enabled = Boolean(base.enabled);
+  const time = normalizeTime(base.time) || '01:00';
+  const daysBackNum = Math.min(30, Math.max(1, Number(base.daysBack || 1)));
+  return {
+    enabled,
+    time,
+    daysBack: Math.floor(daysBackNum),
+    lastRunAt: base.lastRunAt || null,
+    lastRange: base.lastRange || null,
+    lastStatus: base.lastStatus || 'idle',
+    lastError: base.lastError || null,
+  };
+}
 function cookieValue(req, key) {
   const raw = req.headers.cookie || '';
   const match = raw.split(';').map(x => x.trim()).find(x => x.startsWith(key + '='));
@@ -51,17 +106,28 @@ function verifyPassword(password, user) {
   const { hash } = hashPassword(password, user.salt);
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(user.hash, 'hex'));
 }
+function ensureDbShape(db) {
+  if (!Array.isArray(db.users)) db.users = [];
+  if (!Array.isArray(db.records)) db.records = [];
+  if (!db.kyson || typeof db.kyson !== 'object') db.kyson = {};
+  if (!db.kyson.snapshot || typeof db.kyson.snapshot !== 'object') db.kyson.snapshot = {};
+  if (!Array.isArray(db.kyson.users)) db.kyson.users = [];
+  if (!Array.isArray(db.kyson.log)) db.kyson.log = [];
+  if (!db.kyson.reports || typeof db.kyson.reports !== 'object') db.kyson.reports = {};
+  db.kyson.autoSync = normalizeAutoSync(db.kyson.autoSync);
+  return db;
+}
 function loadDb() {
   if (!fs.existsSync(DB_FILE)) {
     const seed = hashPassword('admin123!');
-    const db = {
+    const db = ensureDbShape({
       users: [{ id: rid(), username: 'admin', role: 'admin', createdAt: now(), salt: seed.salt, hash: seed.hash }],
       records: [{ id: rid(), title: 'Khởi tạo hệ thống', status: 'open', note: 'Bản local sẵn sàng vận hành.', createdBy: 'system', createdAt: now() }]
-    };
+    });
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
     return db;
   }
-  return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  return ensureDbShape(JSON.parse(fs.readFileSync(DB_FILE, 'utf8')));
 }
 function saveDb(db) { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2)); }
 function requireAuth(req, res) {
@@ -85,6 +151,119 @@ function staticFile(filePath, res) {
   const ext = path.extname(filePath);
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
   send(res, 200, fs.readFileSync(filePath), { 'Content-Type': types[ext] || 'application/octet-stream' });
+}
+async function syncKyson(body = {}) {
+  const from = normalizeDate(body.dateFrom) || today();
+  const to = normalizeDate(body.dateTo) || from;
+  if (from > to) throw new Error('Khoảng ngày không hợp lệ');
+
+  const client = new KysonClient();
+  await client.login();
+  const [check, pumps, sensors, statuses, grafana, settings, users, log] = await Promise.all([
+    client.checkLogined(),
+    client.getPumps(),
+    client.getSensors(),
+    client.getStatus(),
+    client.getGrafana(),
+    client.getSettings(),
+    client.getUsers(),
+    client.getLog(),
+  ]);
+
+  const reports = {};
+  for (const date of listDates(from, to)) {
+    reports[date] = await generateDailyReport(date, client);
+  }
+
+  return {
+    syncedAt: now(),
+    requestedRange: { from, to },
+    snapshot: {
+      user_info: check.user_info || null,
+      role: check.role || [],
+      pump: pumps.data || pumps.pump || check.pump || [],
+      sensor: sensors.data || sensors.sensor || check.sensor || [],
+      status: statuses.data || statuses.status || check.status || [],
+      grafana: grafana.data || grafana.grafana || check.grafana || [],
+      setting: settings.data || settings.setting || check.setting || [],
+    },
+    users: users.data || users.users || [],
+    log: log.data || log.log || [],
+    reports,
+  };
+}
+function summarizeKysonSync(synced) {
+  return {
+    ok: true,
+    syncedAt: synced.syncedAt,
+    range: synced.requestedRange,
+    counts: {
+      pumps: synced.snapshot.pump.length,
+      sensors: synced.snapshot.sensor.length,
+      statuses: synced.snapshot.status.length,
+      settings: synced.snapshot.setting.length,
+      users: synced.users.length,
+      logs: synced.log.length,
+      reports: Object.keys(synced.reports).length,
+    },
+  };
+}
+async function runAutoSync(reason = 'schedule') {
+  if (schedulerState.running) return false;
+  schedulerState.running = true;
+  try {
+    const db = loadDb();
+    const autoSync = normalizeAutoSync(db.kyson.autoSync);
+    if (!autoSync.enabled) return false;
+    const to = today();
+    const from = shiftDate(to, -(autoSync.daysBack - 1));
+    db.kyson.autoSync = { ...autoSync, lastStatus: 'running', lastError: null, lastRange: { from, to, reason } };
+    saveDb(db);
+    const synced = await syncKyson({ dateFrom: from, dateTo: to });
+    const updated = loadDb();
+    updated.kyson = synced;
+    updated.kyson.autoSync = {
+      ...normalizeAutoSync(updated.kyson.autoSync),
+      enabled: autoSync.enabled,
+      time: autoSync.time,
+      daysBack: autoSync.daysBack,
+      lastRunAt: synced.syncedAt,
+      lastRange: { from, to, reason },
+      lastStatus: 'ok',
+      lastError: null,
+    };
+    saveDb(updated);
+    return true;
+  } catch (err) {
+    const db = loadDb();
+    db.kyson.autoSync = {
+      ...normalizeAutoSync(db.kyson.autoSync),
+      lastStatus: 'error',
+      lastError: String(err.message || err),
+    };
+    saveDb(db);
+    console.error('Kyson auto sync error:', err.message || err);
+    return false;
+  } finally {
+    schedulerState.running = false;
+  }
+}
+function schedulerTick() {
+  const db = loadDb();
+  const autoSync = normalizeAutoSync(db.kyson.autoSync);
+  if (!autoSync.enabled) return;
+  const current = new Date();
+  const hhmm = current.toISOString().slice(11, 16);
+  const todayKey = current.toISOString().slice(0, 10);
+  const alreadyRan = autoSync.lastRunAt && autoSync.lastRunAt.slice(0, 10) === todayKey && autoSync.lastRunAt.slice(11, 16) === autoSync.time;
+  if (hhmm === autoSync.time && !alreadyRan) {
+    runAutoSync('schedule');
+  }
+}
+function startScheduler() {
+  if (schedulerTimer) clearInterval(schedulerTimer);
+  schedulerTimer = setInterval(schedulerTick, 15000);
+  schedulerTick();
 }
 
 const server = http.createServer(async (req, res) => {
@@ -118,6 +297,44 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/records') {
       const me = requireAuth(req, res); if (!me) return;
       return send(res, 200, { records: db.records });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/kyson') {
+      const me = requireAuth(req, res); if (!me) return;
+      return send(res, 200, { kyson: db.kyson, scheduler: schedulerState });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/kyson/auto-sync') {
+      const me = requireAuth(req, res); if (!me) return;
+      return send(res, 200, { autoSync: db.kyson.autoSync, scheduler: schedulerState });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/kyson/auto-sync') {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin'], res)) return;
+      const body = await parseBody(req);
+      const autoSync = normalizeAutoSync(body);
+      db.kyson.autoSync = {
+        ...normalizeAutoSync(db.kyson.autoSync),
+        enabled: autoSync.enabled,
+        time: autoSync.time,
+        daysBack: autoSync.daysBack,
+      };
+      saveDb(db);
+      return send(res, 200, { ok: true, autoSync: db.kyson.autoSync });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/kyson/sync') {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const body = await parseBody(req);
+      const synced = await syncKyson(body);
+      db.kyson = {
+        ...synced,
+        autoSync: db.kyson.autoSync,
+      };
+      saveDb(db);
+      return send(res, 200, summarizeKysonSync(db.kyson));
     }
 
     if (req.method === 'POST' && url.pathname === '/api/records') {
@@ -175,6 +392,7 @@ const server = http.createServer(async (req, res) => {
 
 const HOST = process.env.HOST || '0.0.0.0';
 
+startScheduler();
 server.listen(PORT, HOST, () => {
   console.log(`Ops Standard Local running at http://${HOST}:${PORT}`);
 });
