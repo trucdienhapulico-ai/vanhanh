@@ -31,7 +31,7 @@
 </head>
 <body>
   <h1>Ops Standard Local</h1>
-  <div class="muted">Đăng nhập • Phân quyền • Backup • Xuất file • Tích hợp Kyson</div>
+  <div class="muted">Đăng nhập • Phân quyền • Backup • Xuất file • Tích hợp Kyson • Phiên bản: <span id="appVersion">-</span></div>
 
   <div id="loginCard" class="card">
     <h2>Đăng nhập</h2>
@@ -182,6 +182,29 @@
       </details>
     </div>
 
+    <div id="codeBackupCard" class="card hidden">
+      <h2>Phiên bản code webapp</h2>
+      <div class="row">
+        <div>
+          <div class="muted">Phiên bản hiện tại</div>
+          <code id="appVersionDetail">-</code>
+        </div>
+        <div>
+          <div class="muted">Nhãn snapshot mới</div>
+          <input id="codeBackupLabel" placeholder="vd: truoc-khi-sua-giao-dien">
+        </div>
+        <div style="display:flex;align-items:end;gap:12px">
+          <button id="codeBackupBtn" onclick="createCodeBackupSnapshot()">Tạo snapshot code</button>
+          <button class="secondary" onclick="loadCodeBackups()">Tải danh sách</button>
+        </div>
+      </div>
+      <div id="codeBackupMsg" class="muted" style="margin-top:10px"></div>
+      <table style="margin-top:12px">
+        <thead><tr><th>Thời gian</th><th>Tên snapshot</th><th>Label</th><th>Git commit</th></tr></thead>
+        <tbody id="codeBackupsBody"></tbody>
+      </table>
+    </div>
+
     <div id="usersCard" class="card hidden">
       <h2>Quản lý người dùng</h2>
       <div class="row">
@@ -211,6 +234,11 @@ async function api(path, opts={}){
   return data;
 }
 function msg(id, text, ok=false){ const el=document.getElementById(id); el.textContent=text; el.className=ok?'ok':'err'; }
+function setAppVersion(app={}){
+  const text = app.display || `${app.version || '-'} ${app.gitCommit ? `(${app.gitCommit})` : ''}`.trim() || '-';
+  appVersion.textContent = text;
+  if (document.getElementById('appVersionDetail')) appVersionDetail.textContent = text;
+}
 function safe(v){ return v==null || v==='' ? '-' : String(v); }
 function esc(v){ return safe(v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
 function setTodayInputs(){
@@ -257,6 +285,7 @@ async function boot(){
     const admin=me.role==='admin';
     const canWrite=me.role==='admin'||me.role==='operator';
     document.getElementById('usersCard').classList.toggle('hidden', !admin);
+    document.getElementById('codeBackupCard').classList.toggle('hidden', !admin);
     document.getElementById('backupBtn').disabled=!admin;
     document.getElementById('saveRecordBtn').disabled=!canWrite;
     document.getElementById('kysonSyncBtn').disabled=!canWrite;
@@ -265,9 +294,10 @@ async function boot(){
     document.getElementById('autoSyncTime').disabled=!admin;
     document.getElementById('autoSyncTimeZone').disabled=!admin;
     document.getElementById('autoSyncDaysBack').disabled=!admin;
+    document.getElementById('codeBackupBtn').disabled=!admin;
     if(admin) loadUsers();
     setTodayInputs();
-    await Promise.all([loadRecords(), loadKyson(), loadAutoSyncSettings()]);
+    await Promise.all([loadAppInfo(), loadRecords(), loadKyson(), loadAutoSyncSettings(), admin ? loadCodeBackups() : Promise.resolve()]);
   }catch{}
 }
 async function loadRecords(){
@@ -281,6 +311,33 @@ async function createRecord(){
     recTitle.value=''; recNote.value='';
     loadRecords();
   }catch(e){ msg('recordMsg', e.message); }
+}
+async function loadAppInfo(){
+  try{
+    const data = await api('/api/app-info');
+    setAppVersion(data.app || {});
+  }catch{}
+}
+async function loadCodeBackups(){
+  try{
+    const data = await api('/api/code-backups');
+    setAppVersion(data.app || {});
+    codeBackupsBody.innerHTML = (data.snapshots || []).length
+      ? data.snapshots.map(x => `<tr><td>${esc(x.createdAt)}</td><td>${esc(x.name)}</td><td>${esc(x.label)}</td><td>${esc(x.gitCommit)}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="muted">Chưa có snapshot code.</td></tr>';
+    msg('codeBackupMsg', `Đã nạp ${data.snapshots?.length || 0} snapshot code.`, true);
+  }catch(e){ msg('codeBackupMsg', e.message); }
+}
+async function createCodeBackupSnapshot(){
+  try{
+    const label = codeBackupLabel.value.trim() || 'manual-ui';
+    codeBackupBtn.disabled = true;
+    const data = await api('/api/code-backups', {method:'POST', body:JSON.stringify({label})});
+    codeBackupLabel.value = '';
+    msg('codeBackupMsg', `Đã tạo snapshot: ${data.snapshot?.name || label}`, true);
+    await loadCodeBackups();
+  }catch(e){ msg('codeBackupMsg', e.message); }
+  finally{ codeBackupBtn.disabled = false; }
 }
 async function loadUsers(){
   const data=await api('/api/users');
@@ -376,6 +433,7 @@ async function syncKyson(){
   }catch(e){ msg('kysonMsg', e.message); }
   finally{ kysonSyncBtn.disabled = false; }
 }
+loadAppInfo();
 boot();
 </script>
 </body>

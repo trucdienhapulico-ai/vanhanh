@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { URL } = require('url');
+const { execFileSync, execSync } = require('child_process');
 const { KysonClient } = require('../scripts/kyson-client');
 const { generateDailyReport } = require('../scripts/kyson-water-report');
 
@@ -12,9 +13,23 @@ const DATA_DIR = path.join(ROOT, 'data');
 const BACKUP_DIR = path.join(ROOT, 'backups');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+const VERSION_STORE_DIR = path.join(ROOT, '..', 'state', 'webapp-versions');
+const CODE_BACKUP_SCRIPT = path.join(ROOT, '..', 'scripts', 'webapp-backup-version.sh');
 const sessions = new Map();
 let schedulerTimer = null;
 let schedulerState = { running: false };
+
+const APP_INFO = (() => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  let gitCommit = 'unknown';
+  try { gitCommit = execSync('git rev-parse --short HEAD', { cwd: path.join(ROOT, '..') }).toString().trim(); } catch {}
+  return {
+    name: pkg.name,
+    version: pkg.version || '0.0.0',
+    gitCommit,
+    display: `v${pkg.version || '0.0.0'} (${gitCommit})`,
+  };
+})();
 
 for (const dir of [DATA_DIR, BACKUP_DIR, PUBLIC_DIR]) fs.mkdirSync(dir, { recursive: true });
 
@@ -184,6 +199,37 @@ function staticFile(filePath, res) {
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
   send(res, 200, fs.readFileSync(filePath), { 'Content-Type': types[ext] || 'application/octet-stream' });
 }
+function parseMeta(filePath) {
+  const lines = fs.readFileSync(filePath, 'utf8').split('\n').filter(Boolean);
+  const out = {};
+  for (const line of lines) {
+    const idx = line.indexOf('=');
+    if (idx > -1) out[line.slice(0, idx)] = line.slice(idx + 1);
+  }
+  return out;
+}
+function listCodeBackups() {
+  fs.mkdirSync(VERSION_STORE_DIR, { recursive: true });
+  return fs.readdirSync(VERSION_STORE_DIR)
+    .filter(name => name.endsWith('.meta'))
+    .sort()
+    .reverse()
+    .map(name => {
+      const meta = parseMeta(path.join(VERSION_STORE_DIR, name));
+      return {
+        name: meta.name || name.replace(/\.meta$/, ''),
+        createdAt: meta.created_at_utc || null,
+        label: meta.label || '',
+        gitCommit: meta.git_commit || 'unknown',
+        archive: meta.archive || name.replace(/\.meta$/, '.tar.gz'),
+      };
+    });
+}
+function createCodeBackup(label = 'manual-ui') {
+  const output = execFileSync(CODE_BACKUP_SCRIPT, [label], { cwd: path.join(ROOT, '..') }).toString();
+  const backups = listCodeBackups();
+  return { output, latest: backups[0] || null };
+}
 async function syncKyson(body = {}) {
   const from = normalizeDate(body.dateFrom) || today();
   const to = normalizeDate(body.dateTo) || from;
@@ -321,6 +367,10 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true }, { 'Set-Cookie': 'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0' });
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/app-info') {
+      return send(res, 200, { app: APP_INFO });
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/me') {
       const me = requireAuth(req, res); if (!me) return;
       return send(res, 200, me);
@@ -378,6 +428,20 @@ const server = http.createServer(async (req, res) => {
       db.records.push({ id: rid(), title: body.title, status: body.status || 'open', note: body.note || '', createdBy: me.username, createdAt: now() });
       saveDb(db);
       return send(res, 200, { ok: true });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/code-backups') {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin'], res)) return;
+      return send(res, 200, { app: APP_INFO, snapshots: listCodeBackups() });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/code-backups') {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin'], res)) return;
+      const body = await parseBody(req);
+      const result = createCodeBackup(body.label || `manual-${me.username}`);
+      return send(res, 200, { ok: true, app: APP_INFO, snapshot: result.latest, output: result.output });
     }
 
     if (req.method === 'GET' && url.pathname === '/api/users') {

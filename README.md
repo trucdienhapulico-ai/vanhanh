@@ -28,6 +28,7 @@ Webapp nội bộ vận hành:
 - phân quyền `admin / operator / viewer`
 - quản lý record nội bộ
 - backup dữ liệu
+- backup phiên bản code webapp
 - export JSON / CSV
 
 ## Chạy nhanh
