@@ -1,0 +1,38 @@
+services:
+  coordinator:
+    image: ubuntu:24.04
+    container_name: ma-coordinator
+    command: ["bash", "-lc", "sleep infinity"]
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./app:/workspace/app
+      - ./data:/workspace/data
+
+  manager-ops:
+    image: ubuntu:24.04
+    container_name: ma-manager-ops
+    command: ["bash", "-lc", "sleep infinity"]
+    tty: true
+    stdin_open: true
+
+  manager-maintenance:
+    image: ubuntu:24.04
+    container_name: ma-manager-maintenance
+    command: ["bash", "-lc", "sleep infinity"]
+    tty: true
+    stdin_open: true
+
+  manager-incident:
+    image: ubuntu:24.04
+    container_name: ma-manager-incident
+    command: ["bash", "-lc", "sleep infinity"]
+    tty: true
+    stdin_open: true
+
+  qa-risk:
+    image: ubuntu:24.04
+    container_name: ma-qa-risk
+    command: ["bash", "-lc", "sleep infinity"]
+    tty: true
+    stdin_open: true

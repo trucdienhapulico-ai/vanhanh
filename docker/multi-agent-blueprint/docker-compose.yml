@@ -1,0 +1,12 @@
+services:
+  blueprint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multi-agent-blueprint
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./app:/workspace/app
+      - ./data:/workspace/data

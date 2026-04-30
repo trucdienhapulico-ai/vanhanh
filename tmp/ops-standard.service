@@ -1,0 +1,17 @@
+[Unit]
+Description=Ops Standard Local Webapp
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/.openclaw/workspace/ops-standard
+Environment=NODE_ENV=production
+Environment=PORT=3080
+Environment=HOST=0.0.0.0
+ExecStart=/usr/bin/node /root/.openclaw/workspace/ops-standard/server.js
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target

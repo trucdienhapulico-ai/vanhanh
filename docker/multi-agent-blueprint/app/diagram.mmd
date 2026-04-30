@@ -1,0 +1,29 @@
+flowchart TD
+    H[Human Commander] --> C[tocodienbot\nChief Coordinator]
+    C --> M1[Ops Manager]
+    C --> M2[Maintenance Manager]
+    C --> M3[Incident Manager]
+    C --> M4[Projects Manager]
+    C --> M5[Safety & Compliance Manager]
+    C --> M6[Inventory & Procurement Manager]
+
+    M1 --> S1[Electrical Specialist]
+    M1 --> S2[Pump & Irrigation Specialist]
+    M1 --> S3[PLC & Automation Specialist]
+    M1 --> S4[HVAC Specialist]
+    M1 --> S5[Lighting Specialist]
+    M1 --> S6[Generator Specialist]
+
+    M2 --> S7[Water Treatment Specialist]
+    M2 --> S8[Documentation Specialist]
+    M2 --> S9[Reporting Analyst]
+
+    M3 --> G1[QA Critic Agent]
+    M3 --> G2[Risk Agent]
+    M3 --> G3[Audit Trail Agent]
+    M3 --> G4[Knowledge Agent]
+
+    G1 --> C
+    G2 --> C
+    G3 --> C
+    G4 --> C
