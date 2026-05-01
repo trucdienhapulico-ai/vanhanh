@@ -399,6 +399,11 @@
           <button onclick="createUser()">Tạo user</button>
         </div>
         <div id="userMsg" class="muted" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:12px">
+          <input id="resetUserName" placeholder="user cần reset mật khẩu">
+          <input id="resetUserPass" type="password" placeholder="mật khẩu mới (>= 6 ký tự)">
+          <button class="warn" onclick="resetUserPassword()">Reset mật khẩu user</button>
+        </div>
         <table style="margin-top:12px">
           <thead><tr><th>User</th><th>Vai trò</th><th>Hạng mục quản lý</th><th>Tạo lúc</th></tr></thead>
           <tbody id="usersBody"></tbody>
@@ -427,6 +432,7 @@ const UI_MAP_ROWS = [
   ['Dữ liệu Kyson','Khối thống kê và bảng dữ liệu','Thẻ thống kê / báo cáo ngày / danh sách bơm / cảm biến / log','Theo dõi dữ liệu nước và trạng thái hệ thống','Dữ liệu Kyson > [tên bảng/thẻ] > sửa thành ...'],
   ['Phiên bản code webapp','Quản lý snapshot code','Phiên bản hiện tại / tạo snapshot / danh sách restore','Quản lý version code webapp','Phiên bản code webapp > [nút/bảng] > sửa thành ...'],
   ['Quản lý người dùng','Form và bảng user','Tài khoản / mật khẩu / vai trò / hạng mục quản lý / danh sách user','Tạo và kiểm soát tài khoản nội bộ','Quản lý người dùng > [form/bảng] > sửa thành ...'],
+  ['Quản lý người dùng','Reset mật khẩu user','User cần reset / mật khẩu mới / nút Reset mật khẩu user','Admin cấp lại mật khẩu cho tài khoản khác','Quản lý người dùng > Reset mật khẩu user > [ô/nút] > sửa thành ...'],
   ['Tài khoản cá nhân','Đổi mật khẩu','Mật khẩu hiện tại / mật khẩu mới / nhập lại / nút đổi mật khẩu','Cho từng người dùng tự đổi mật khẩu','Tài khoản cá nhân > Đổi mật khẩu > [ô/nút] > sửa thành ...'],
 ];
 let currentUserRole = null;
@@ -843,6 +849,14 @@ async function createUser(){
   try{
     await api('/api/users',{method:'POST',body:JSON.stringify({username:newUser.value.trim(),password:newPass.value,role:newRole.value,managementScope:newManagementScope.value.trim()})});
     msg('userMsg','Đã tạo user.', true); newUser.value=''; newPass.value=''; newManagementScope.value=''; loadUsers();
+  }catch(e){ msg('userMsg', e.message); }
+}
+async function resetUserPassword(){
+  try{
+    await api('/api/users/reset-password', {method:'POST', body:JSON.stringify({username:resetUserName.value.trim(), newPassword:resetUserPass.value})});
+    msg('userMsg', `Đã reset mật khẩu cho ${resetUserName.value.trim()}.`, true);
+    resetUserName.value='';
+    resetUserPass.value='';
   }catch(e){ msg('userMsg', e.message); }
 }
 async function changeMyPassword(){

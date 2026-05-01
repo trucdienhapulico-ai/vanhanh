@@ -760,6 +760,21 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true });
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/users/reset-password') {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin'], res)) return;
+      const body = await parseBody(req);
+      if (!body.username || !body.newPassword) return send(res, 400, { error: 'Thiếu user hoặc mật khẩu mới' });
+      if (String(body.newPassword).length < 6) return send(res, 400, { error: 'Mật khẩu mới phải từ 6 ký tự' });
+      const user = db.users.find(u => u.username === body.username);
+      if (!user) return send(res, 404, { error: 'Không tìm thấy user' });
+      const seed = hashPassword(body.newPassword);
+      user.salt = seed.salt;
+      user.hash = seed.hash;
+      saveDb(db);
+      return send(res, 200, { ok: true, username: user.username });
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/backup') {
       const me = requireAuth(req, res); if (!me) return;
       if (!requireRole(me, ['admin'], res)) return;

@@ -22,6 +22,7 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 - Cài lịch sync tự động hằng ngày ngay trong webapp
 - Quản lý snapshot phiên bản code webapp và khôi phục từ giao diện admin
 - Cho phép từng người dùng tự đổi mật khẩu trong webapp
+- Admin có thể reset mật khẩu cho user khác
 - Gán `hạng mục quản lý` cho từng tài khoản để mô tả phạm vi phụ trách
 
 ## Cấu trúc chính
@@ -46,6 +47,14 @@ Yêu cầu:
 - nhập đúng mật khẩu hiện tại
 - nhập mật khẩu mới
 - nhập lại để xác nhận
+
+## Reset mật khẩu bởi admin
+Trong mục **Quản lý người dùng**, admin có thể:
+- nhập `user cần reset`
+- nhập `mật khẩu mới`
+- bấm **Reset mật khẩu user**
+
+Dùng khi cần cấp lại nhanh tài khoản cho nhân viên.
 
 ## Sơ đồ UI / góp ý
 Webapp có một thẻ riêng tên **Sơ đồ UI / góp ý** để:
