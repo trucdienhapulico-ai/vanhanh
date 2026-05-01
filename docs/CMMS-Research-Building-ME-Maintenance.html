@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<!-- saved from url=(0148)file:///C:/Users/vitmo.WINDOWS11PRO/AppData/Local/Packages/CLAUDE~1/LOCALC~1/Roaming/Claude/LOCAL-~1/4744FF~1/56EB02~1/LO5013~1/outputs/CMMS_R~1.HTM -->
+<html lang="vi"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMMS Research – Building M&amp;E Maintenance</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; font-size: 14px; }
+
+  .header { background: linear-gradient(135deg, #1e40af 0%, #0891b2 100%); color: white; padding: 28px 40px; }
+  .header h1 { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+  .header p { opacity: 0.85; font-size: 13px; }
+
+  .tabs { display: flex; background: white; border-bottom: 2px solid #e2e8f0; padding: 0 32px; gap: 4px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow-x: auto; }
+  .tab { padding: 13px 20px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; color: #64748b; transition: all .2s; }
+  .tab:hover { color: #1e40af; }
+  .tab.active { color: #1e40af; border-bottom-color: #1e40af; font-weight: 700; }
+
+  .content { padding: 28px 32px; max-width: 1300px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px 26px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .card-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+
+  /* Comparison Table */
+  .cmp-wrap { overflow-x: auto; }
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.cmp thead tr { background: #1e40af; color: white; }
+  table.cmp th { padding: 11px 13px; text-align: center; font-weight: 600; white-space: nowrap; }
+  table.cmp th:first-child { text-align: left; min-width: 200px; }
+  table.cmp td { padding: 9px 13px; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: middle; }
+  table.cmp td:first-child { text-align: left; font-weight: 500; color: #334155; }
+  table.cmp tr:nth-child(even) td { background: #f8fafc; }
+  table.cmp tr:hover td { background: #eff6ff; }
+  .badge-yes { color: #16a34a; font-size: 18px; }
+  .badge-no { color: #dc2626; font-size: 18px; }
+  .badge-partial { color: #d97706; font-size: 18px; }
+  .cat-row td { background: #e0f2fe !important; font-weight: 700; color: #0369a1 !important; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; padding: 8px 13px; }
+
+  /* Product grid */
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+  .product-card { background: white; border-radius: 10px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow .2s; }
+  .product-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+  .pname { font-weight: 700; font-size: 15px; color: #0f172a; display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+  .pbadge { font-size: 10px; padding: 2px 9px; border-radius: 20px; font-weight: 600; }
+  .pbadge.free { background: #dcfce7; color: #16a34a; }
+  .pbadge.paid { background: #fef3c7; color: #92400e; }
+  .pbadge.enterprise { background: #ede9fe; color: #5b21b6; }
+  .pbadge.legacy { background: #f1f5f9; color: #64748b; }
+  .pdesc { font-size: 12.5px; color: #64748b; margin-bottom: 12px; line-height: 1.6; }
+  .ptags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .ptag { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569; }
+  .pprice { font-size: 11px; color: #94a3b8; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
+  .pstrength { font-size: 11px; color: #0891b2; margin-top: 6px; font-style: italic; font-weight: 600; }
+
+  /* Tree */
+  .tree { font-size: 13px; line-height: 1.7; }
+  .tree ul { list-style: none; padding-left: 22px; border-left: 2px dashed #cbd5e1; margin: 3px 0; }
+  .tree > ul { padding-left: 0; border-left: none; }
+  .tree li { padding: 3px 0; }
+  .t-root { font-size: 16px; font-weight: 900; color: #1e40af; padding: 10px 0 6px !important; }
+  .t-module { font-weight: 800; color: #0f172a; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .t-sub { color: #1e40af; font-weight: 700; }
+  .t-leaf { color: #475569; padding-left: 4px; }
+  .t-leaf::before { content: '▸ '; color: #94a3b8; font-size: 10px; }
+
+  /* Screens */
+  .screens-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+  .screen-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 15px 17px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .screen-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .screen-num { font-size: 11px; font-weight: 800; color: white; background: #1e40af; min-width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+  .screen-name { font-weight: 700; color: #0f172a; font-size: 13.5px; }
+  .screen-desc { font-size: 12px; color: #64748b; line-height: 1.6; }
+  .screen-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 9px; }
+  .stag { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+  .stag.mvp { background: #fee2e2; color: #991b1b; }
+  .stag.p2 { background: #f1f5f9; color: #475569; }
+  .stag.role { background: #ede9fe; color: #5b21b6; }
+  .stag.module { background: #dcfce7; color: #166534; }
+
+  /* Tech stack */
+  .stack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .stack-card { background: white; border-radius: 10px; border: 1px solid #e2e8f0; padding: 16px 18px; }
+  .stack-layer { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 12px; }
+  .layer-fe { background: #dbeafe; color: #1e40af; }
+  .layer-mob { background: #fce7f3; color: #9d174d; }
+  .layer-be { background: #dcfce7; color: #166534; }
+  .layer-db { background: #fef3c7; color: #92400e; }
+  .layer-infra { background: #f3e8ff; color: #6b21a8; }
+  .layer-tool { background: #fff7ed; color: #c2410c; }
+  .stack-item { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
+  .stack-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .si-name { font-weight: 700; font-size: 13px; color: #0f172a; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+  .si-desc { font-size: 12px; color: #64748b; line-height: 1.5; }
+  .si-reason { font-size: 11px; color: #0891b2; margin-top: 3px; font-weight: 500; }
+  .si-badge { font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 700; }
+  .badge-rec { background: #dcfce7; color: #166534; }
+  .badge-mvp { background: #fef3c7; color: #92400e; }
+
+  .intro { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 20px; margin-bottom: 22px; font-size: 13px; color: #1e40af; line-height: 1.7; }
+  .tip-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 18px 22px; margin-top: 20px; }
+  .tip-box h3 { color: #92400e; font-size: 14px; margin-bottom: 12px; }
+  .tip-box p { font-size: 13px; color: #78350f; line-height: 1.8; margin-bottom: 8px; }
+  .tip-box p:last-child { margin-bottom: 0; }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #64748b; }
+
+  ::-webkit-scrollbar { height: 5px; width: 5px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔧 Nghiên cứu CMMS – Hệ thống Quản lý Bảo trì Cơ điện Tòa nhà</h1>
+  <p>Phân tích 8 sản phẩm CMMS hàng đầu · Bảng so sánh tính năng · Sơ đồ module nội bộ · Danh sách màn hình · Gợi ý Tech Stack · Cập nhật 05/2026</p>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab(&#39;products&#39;, this)">📦 8 Sản phẩm CMMS</div>
+  <div class="tab" onclick="showTab(&#39;compare&#39;, this)">📊 Bảng So sánh</div>
+  <div class="tab" onclick="showTab(&#39;modules&#39;, this)">🗺️ Sơ đồ Module</div>
+  <div class="tab" onclick="showTab(&#39;screens&#39;, this)">🖥️ Danh sách Màn hình</div>
+  <div class="tab" onclick="showTab(&#39;techstack&#39;, this)">⚙️ Tech Stack</div>
+</div>
+
+<div class="content">
+
+<!-- ===== TAB 1: PRODUCTS ===== -->
+<div id="tab-products" class="section active">
+  <div class="intro">
+    <strong>Tổng quan 8 sản phẩm CMMS phổ biến nhất 2025–2026.</strong> Mỗi sản phẩm có thế mạnh riêng — chọn đúng phụ thuộc vào quy mô tổ chức, ngành nghề, ngân sách và yêu cầu tích hợp.
+  </div>
+  <div class="product-grid">
+
+    <div class="product-card">
+      <div class="pname">🟦 Limble CMMS <span class="pbadge paid">Trả phí</span></div>
+      <div class="pdesc">CMMS mạnh nhất về workflow tùy chỉnh và quản lý vòng đời tài sản đầy đủ. Inventory depth cao, compliance-ready, giao diện trực quan dễ cấu hình không cần IT.</div>
+      <div class="ptags">
+        <span class="ptag">Work Orders</span><span class="ptag">PM Scheduling</span><span class="ptag">Asset Lifecycle</span>
+        <span class="ptag">Inventory</span><span class="ptag">Analytics</span><span class="ptag">Multi-site</span><span class="ptag">Compliance</span>
+      </div>
+      <div class="pprice">💰 Từ $28/user/tháng · Free trial 30 ngày</div>
+      <div class="pstrength">✨ Tốt nhất: Customizable workflows + compliance reports</div>
+    </div>
+
+    <div class="product-card">
+      <div class="pname">🟩 Fiix CMMS <span class="pbadge free">Có free plan</span></div>
+      <div class="pdesc">Thuộc Rockwell Automation từ 2021. Tích hợp sâu với Allen-Bradley PLCs, FactoryTalk, hệ thống tự động hóa công nghiệp. Free plan đủ dùng cho nhóm nhỏ.</div>
+      <div class="ptags">
+        <span class="ptag">Work Orders</span><span class="ptag">PM</span><span class="ptag">IoT/SCADA</span>
+        <span class="ptag">Inventory</span><span class="ptag">AI Insights</span><span class="ptag">Rockwell Integration</span>
+      </div>
+      <div class="pprice">💰 Free / $45 / $75 per user/tháng</div>
+      <div class="pstrength">✨ Tốt nhất: Tích hợp hệ thống Rockwell / công nghiệp nặng</div>
+    </div>
+
+    <div class="product-card">
+      <div class="pname">🟧 UpKeep <span class="pbadge paid">Trả phí</span></div>
+      <div class="pdesc">Xếp hạng #1 CMMS 2026 về mobile-first. Cloud-based với offline mode. Giao diện hiện đại, AI-powered insights. Phù hợp SME đến Enterprise. Onboarding rất nhanh.</div>
+      <div class="ptags">
+        <span class="ptag">Mobile-first</span><span class="ptag">Work Orders</span><span class="ptag">PM</span>
+        <span class="ptag">Asset Mgmt</span><span class="ptag">AI Analytics</span><span class="ptag">Offline Mode</span>
+      </div>
+      <div class="pprice">💰 Từ $20/user/tháng</div>
+      <div class="pstrength">✨ Tốt nhất: Mobile UX + cloud-first + ease of use</div>
+    </div>
+
+    <div class="product-card">
+      <div class="pname">🟫 Maintenance Connection <span class="pbadge enterprise">Enterprise</span></div>
+      <div class="pdesc">Thuộc Accruent. Chuyên cho tổ chức lớn, đa site (bệnh viện, trường học, công trình hạ tầng). Nổi bật về custom fields không giới hạn, audit trails và compliance reporting.</div>
+      <div class="ptags">
+        <span class="ptag">Multi-site</span><span class="ptag">Custom Fields</span><span class="ptag">Audit Trail</span>
+        <span class="ptag">Compliance</span><span class="ptag">Work Orders</span><span class="ptag">Enterprise Reporting</span>
+      </div>
+      <div class="pprice">💰 Custom pricing (liên hệ sales)</div>
+      <div class="pstrength">✨ Tốt nhất: Compliance + audit trail + multi-site quy mô lớn</div>
+    </div>
+
+    <div class="product-card">
+      <div class="pname">🟪 eMaint CMMS <span class="pbadge enterprise">Enterprise</span></div>
+      <div class="pdesc">Thuộc Fluke Corporation. Tích hợp trực tiếp hệ sinh thái cảm biến condition monitoring của Fluke. Mạnh về predictive maintenance, asset hierarchy và audit trails chi tiết.</div>
+      <div class="ptags">
+        <span class="ptag">Condition-based PM</span><span class="ptag">Predictive</span><span class="ptag">Fluke Sensors</span>
+        <span class="ptag">Multi-site</span><span class="ptag">Compliance</span><span class="ptag">Asset Hierarchy</span>
+      </div>
+      <div class="pprice">💰 $69–$85+/user/tháng (min 3 users)</div>
+      <div class="pstrength">✨ Tốt nhất: Predictive maintenance + IoT sensor integration</div>
+    </div>
+
+    <div class="product-card">
+      <div class="pname">🔵 Fracttal One <span class="pbadge paid">Trả phí</span></div>
+      <div class="pdesc">CMMS cloud hiện đại với AI và IoT tích hợp sâu. Predictive analytics, dashboards tùy chỉnh, mobile-first design. Phổ biến tại Latin America, đang mở rộng toàn cầu.</div>
+      <div class="ptags">
+        <span class="ptag">AI-powered</span><span class="ptag">IoT Integration</span><span class="ptag">Predictive PM</span>
+        <span class="ptag">Mobile</span><span class="ptag">Custom Dashboards</span><span class="ptag">KPI Tracking</span>
+      </div>
+      <div class="pprice">💰 Custom pricing theo quy mô tổ chức</div>
+      <div class="pstrength">✨ Tốt nhất: AI + IoT cho portfolio tài sản phức tạp</div>
+    </div>
+
+    <div class="product-card">
+      <div class="pname">🟢 MaintainX <span class="pbadge free">Có free plan</span></div>
+      <div class="pdesc">CMMS thân thiện nhất, phone-native, tích hợp chat &amp; work order. AI Procedure Generator tự động tạo checklist. Voice memo transcription. Free plan đầy đủ tính năng cơ bản.</div>
+      <div class="ptags">
+        <span class="ptag">Phone-native</span><span class="ptag">Free Plan</span><span class="ptag">AI Procedures</span>
+        <span class="ptag">Voice Memo</span><span class="ptag">Work Orders</span><span class="ptag">Real-time Chat</span>
+      </div>
+      <div class="pprice">💰 Free / $16 / $49 per user/tháng</div>
+      <div class="pstrength">✨ Tốt nhất: Ease of use + digital paper trail + free tier</div>
+    </div>
+
+    <div class="product-card">
+      <div class="pname">⬜ Hippo → Eptura Asset <span class="pbadge legacy">Legacy/Merged</span></div>
+      <div class="pdesc">Hippo CMMS đã ngừng hoạt động độc lập, chuyển thành Eptura Asset (nền tảng lớn hơn). Từng phổ biến cho facilities management tòa nhà. Nay tích hợp workspace management.</div>
+      <div class="ptags">
+        <span class="ptag">Facilities Mgmt</span><span class="ptag">Work Orders</span><span class="ptag">PM Scheduling</span>
+        <span class="ptag">Inventory</span><span class="ptag">Workspace Mgmt</span><span class="ptag">Eptura Platform</span>
+      </div>
+      <div class="pprice">💰 Liên hệ Eptura Asset (custom pricing)</div>
+      <div class="pstrength">✨ Tốt nhất: Facilities + workspace management tích hợp</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== TAB 2: COMPARE ===== -->
+<div id="tab-compare" class="section">
+  <div class="intro">
+    Bảng so sánh chi tiết tính năng cốt lõi của 8 CMMS phổ biến.<br>
+    <strong>✅</strong> = Có đầy đủ &nbsp;·&nbsp; <strong>🟡</strong> = Có một phần / cần plan cao hơn &nbsp;·&nbsp; <strong>❌</strong> = Không có hoặc chưa xác nhận
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Bảng So sánh Tính năng Chi tiết</div>
+    <div class="card-sub">Tổng hợp từ Limble, G2, Tractian, Capterra, SelectHub 2025–2026</div>
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>Tính năng</th>
+            <th>Limble</th>
+            <th>Fiix</th>
+            <th>UpKeep</th>
+            <th>Maint.Conn.</th>
+            <th>eMaint</th>
+            <th>Fracttal</th>
+            <th>MaintainX</th>
+            <th>Eptura</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- WORK ORDER -->
+          <tr class="cat-row"><td colspan="9">📋 QUẢN LÝ LỆNH CÔNG VIỆC (WORK ORDER MANAGEMENT)</td></tr>
+          <tr><td>Tạo Work Order thủ công</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Tự động tạo WO từ lịch PM</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Phân công kỹ thuật viên</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Mức ưu tiên &amp; SLA tracking</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Checklist &amp; Procedure tích hợp</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Đính kèm ảnh / tài liệu WO</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>QR Code / Barcode scan</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>Portal tiếp nhận yêu cầu bên ngoài</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Theo dõi thời gian làm việc (Timesheet)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td></tr>
+
+          <!-- ASSET -->
+          <tr class="cat-row"><td colspan="9">🏗️ QUẢN LÝ TÀI SẢN (ASSET MANAGEMENT)</td></tr>
+          <tr><td>Hồ sơ tài sản chi tiết</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Phân cấp tài sản (Location hierarchy)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Lịch sử bảo trì theo tài sản</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Vòng đời tài sản (Asset Lifecycle)</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Tài liệu kỹ thuật / Manual đính kèm</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Cảnh báo hết hạn bảo hành</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>Chi phí tổng (Total Cost of Ownership)</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-yes">✅</td></tr>
+
+          <!-- PM -->
+          <tr class="cat-row"><td colspan="9">🔄 BẢO TRÌ PHÒNG NGỪA (PREVENTIVE MAINTENANCE)</td></tr>
+          <tr><td>PM theo lịch cố định (Time-based)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>PM theo giờ vận hành (Meter-based)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>Condition-based / Predictive PM</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>Calendar view lịch bảo trì</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Template / Thư viện checklist SOP</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+
+          <!-- INVENTORY -->
+          <tr class="cat-row"><td colspan="9">📦 QUẢN LÝ VẬT TƯ &amp; KHO (INVENTORY &amp; PARTS)</td></tr>
+          <tr><td>Quản lý kho vật tư / phụ tùng</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Cảnh báo tồn kho thấp</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Quản lý nhà cung cấp (Vendor)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Purchase Orders (Đặt hàng)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+
+          <!-- MOBILE -->
+          <tr class="cat-row"><td colspan="9">📱 MOBILE &amp; TRẢI NGHIỆM NGƯỜI DÙNG (UX)</td></tr>
+          <tr><td>Ứng dụng iOS &amp; Android native</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Offline mode (không cần mạng)</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>Hỗ trợ đa ngôn ngữ</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>Giao diện thân thiện (Easy onboarding)</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td></tr>
+
+          <!-- REPORTING -->
+          <tr class="cat-row"><td colspan="9">📈 BÁO CÁO &amp; PHÂN TÍCH (REPORTING &amp; ANALYTICS)</td></tr>
+          <tr><td>Dashboard KPI tùy chỉnh</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Báo cáo tùy chỉnh (Report builder)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Export Excel / PDF</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>MTTR / MTBF analytics</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>PM Compliance rate tracking</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>Gửi báo cáo tự động (Scheduled reports)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-yes">✅</td></tr>
+
+          <!-- INTEGRATION -->
+          <tr class="cat-row"><td colspan="9">🔗 TÍCH HỢP &amp; MỞ RỘNG (INTEGRATIONS)</td></tr>
+          <tr><td>REST API / Webhooks</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>IoT / Sensor data integration</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>AI / Machine Learning features</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>SSO / LDAP / Active Directory</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+          <tr><td>ERP / BMS / BIM integration</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-no">❌</td><td class="badge-yes">✅</td></tr>
+
+          <!-- PRICING -->
+          <tr class="cat-row"><td colspan="9">💰 GIÁ &amp; MODEL</td></tr>
+          <tr><td>Free plan</td><td class="badge-no">❌</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-no">❌</td><td class="badge-no">❌</td><td class="badge-no">❌</td><td class="badge-yes">✅</td><td class="badge-no">❌</td></tr>
+          <tr><td>Giá khởi điểm thấp (&lt;$30/user)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-no">❌</td><td class="badge-no">❌</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-no">❌</td></tr>
+          <tr><td>Phù hợp SME (dưới 50 người)</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td></tr>
+          <tr><td>Phù hợp Enterprise</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-yes">✅</td><td class="badge-partial">🟡</td><td class="badge-yes">✅</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB 3: MODULES ===== -->
+<div id="tab-modules" class="section">
+  <div class="intro">
+    <strong>Sơ đồ module tổng quát cho hệ thống CMMS nội bộ</strong> dành riêng cho công ty vận hành bảo trì cơ điện tòa nhà (Building M&amp;E Maintenance). Thiết kế phù hợp đặc thù: nhiều tòa nhà, nhiều hệ thống M&amp;E, kỹ thuật viên hiện trường đa phần dùng mobile.
+  </div>
+  <div class="card">
+    <div class="card-title">🗺️ Module Map – Building M&amp;E CMMS Nội bộ</div>
+    <div class="card-sub">Cấu trúc phân cấp · 9 module chính · Phù hợp cho development theo phase</div>
+    <div class="tree">
+      <ul>
+        <li class="t-root">🏢 BUILDING M&amp;E CMMS — Hệ thống Quản lý Bảo trì Cơ điện Tòa nhà</li>
+        <ul>
+
+          <li><span class="t-module">📊 1. DASHBOARD &amp; TỔNG QUAN</span>
+            <ul>
+              <li><span class="t-sub">1.1 Dashboard Quản lý / Ban Giám đốc</span>
+                <ul>
+                  <li class="t-leaf">KPI tổng hợp: WO hoàn thành, đang mở, quá hạn</li>
+                  <li class="t-leaf">Tỷ lệ PM vs CM (phòng ngừa vs sửa chữa)</li>
+                  <li class="t-leaf">MTTR / MTBF toàn hệ thống</li>
+                  <li class="t-leaf">Biểu đồ xu hướng sự cố theo tháng / quý</li>
+                  <li class="t-leaf">Top thiết bị hỏng hóc nhiều nhất</li>
+                  <li class="t-leaf">Chi phí bảo trì so với ngân sách</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">1.2 Dashboard Kỹ thuật viên (Mobile-first)</span>
+                <ul>
+                  <li class="t-leaf">Danh sách WO được giao hôm nay, sắp xếp theo ưu tiên</li>
+                  <li class="t-leaf">PM sắp đến hạn trong 7 ngày</li>
+                  <li class="t-leaf">Thông báo mới chưa đọc</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">1.3 Dashboard Site / Tòa nhà</span>
+                <ul>
+                  <li class="t-leaf">Tình trạng hoạt động theo từng hệ thống M&amp;E</li>
+                  <li class="t-leaf">Bản đồ tầng (floor plan) với trạng thái thiết bị</li>
+                  <li class="t-leaf">Sự cố đang mở theo khu vực</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">📋 2. QUẢN LÝ LỆNH CÔNG VIỆC (WORK ORDER)</span>
+            <ul>
+              <li><span class="t-sub">2.1 Phân loại Work Order</span>
+                <ul>
+                  <li class="t-leaf">WO Khẩn cấp (Emergency – CM)</li>
+                  <li class="t-leaf">WO Sửa chữa thông thường (Corrective – CM)</li>
+                  <li class="t-leaf">WO Bảo trì định kỳ (Preventive – PM)</li>
+                  <li class="t-leaf">WO Kiểm tra (Inspection)</li>
+                  <li class="t-leaf">WO Cải tiến / Nâng cấp</li>
+                  <li class="t-leaf">WO Bảo hành (Warranty)</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">2.2 Luồng xử lý WO (Workflow)</span>
+                <ul>
+                  <li class="t-leaf">Mới → Chờ duyệt → Phân công → Đang xử lý → Chờ vật tư → Hoàn thành → Xác nhận nghiệm thu → Đóng</li>
+                  <li class="t-leaf">Phân quyền duyệt theo cấp bậc (KTV → Tổ trưởng → Quản lý)</li>
+                  <li class="t-leaf">SLA tracking với cảnh báo tự động quá hạn</li>
+                  <li class="t-leaf">Escalation tự động khi WO không được xử lý đúng hạn</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">2.3 Nội dung Work Order</span>
+                <ul>
+                  <li class="t-leaf">Mô tả sự cố / yêu cầu chi tiết</li>
+                  <li class="t-leaf">Thiết bị / tài sản liên quan</li>
+                  <li class="t-leaf">Kỹ thuật viên được giao</li>
+                  <li class="t-leaf">Checklist các bước thực hiện</li>
+                  <li class="t-leaf">Ảnh trước / trong / sau khi sửa chữa</li>
+                  <li class="t-leaf">Ghi chú kỹ thuật viên</li>
+                  <li class="t-leaf">Vật tư đã sử dụng + chi phí</li>
+                  <li class="t-leaf">Thời gian làm việc thực tế (check-in/out)</li>
+                  <li class="t-leaf">Chữ ký nghiệm thu điện tử</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">2.4 Portal Tiếp nhận Yêu cầu (Tenant Portal)</span>
+                <ul>
+                  <li class="t-leaf">Form báo cáo sự cố đơn giản (không cần login phức tạp)</li>
+                  <li class="t-leaf">Đính kèm ảnh từ điện thoại</li>
+                  <li class="t-leaf">Theo dõi trạng thái xử lý</li>
+                  <li class="t-leaf">Tự động tạo WO trong hệ thống và gửi thông báo</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">🔄 3. BẢO TRÌ PHÒNG NGỪA (PREVENTIVE MAINTENANCE)</span>
+            <ul>
+              <li><span class="t-sub">3.1 Lập kế hoạch PM</span>
+                <ul>
+                  <li class="t-leaf">PM theo chu kỳ thời gian: hàng ngày / tuần / tháng / quý / 6 tháng / năm</li>
+                  <li class="t-leaf">PM theo giờ vận hành (runtime-based) — máy bơm, máy nén khí</li>
+                  <li class="t-leaf">PM theo chỉ số đo (meter-based) — công tơ điện, đồng hồ nước</li>
+                  <li class="t-leaf">PM theo điều kiện (condition-based) — nhiệt độ, rung động</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">3.2 Lịch PM (PM Calendar)</span>
+                <ul>
+                  <li class="t-leaf">Giao diện calendar: tháng / tuần / ngày / danh sách</li>
+                  <li class="t-leaf">Filter theo: tòa nhà / hệ thống M&amp;E / kỹ thuật viên</li>
+                  <li class="t-leaf">Màu sắc trạng thái: hoàn thành / sắp đến / quá hạn</li>
+                  <li class="t-leaf">Kéo thả điều chỉnh lịch</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">3.3 Thư viện Template PM</span>
+                <ul>
+                  <li class="t-leaf">Mẫu checklist theo loại thiết bị M&amp;E</li>
+                  <li class="t-leaf">SOP (Standard Operating Procedure) chuẩn hóa</li>
+                  <li class="t-leaf">Phiên bản hóa template (version control)</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">🏗️ 4. QUẢN LÝ TÀI SẢN / THIẾT BỊ (ASSET MANAGEMENT)</span>
+            <ul>
+              <li><span class="t-sub">4.1 Phân cấp tài sản theo M&amp;E</span>
+                <ul>
+                  <li class="t-leaf">Tòa nhà → Tầng / Khu vực → Hệ thống → Thiết bị → Linh kiện</li>
+                  <li class="t-leaf">Hệ thống điện (MVB, hạ thế, UPS, máy phát)</li>
+                  <li class="t-leaf">Hệ thống HVAC (AHU, FCU, chiller, cooling tower)</li>
+                  <li class="t-leaf">Hệ thống thang máy / thang cuốn</li>
+                  <li class="t-leaf">PCCC (bơm, tủ điện, cảm biến khói, sprinkler)</li>
+                  <li class="t-leaf">Cấp thoát nước (bơm, bồn, hệ thống xử lý)</li>
+                  <li class="t-leaf">Hệ thống yếu điện (camera, access control, BMS)</li>
+                  <li class="t-leaf">Hệ thống chiếu sáng</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">4.2 Hồ sơ thiết bị</span>
+                <ul>
+                  <li class="t-leaf">Thông tin kỹ thuật: model, serial number, công suất, thông số vận hành</li>
+                  <li class="t-leaf">QR Code / Barcode in ra dán lên thiết bị</li>
+                  <li class="t-leaf">Tài liệu đính kèm: catalogue, manual, bản vẽ As-built</li>
+                  <li class="t-leaf">Nhà cung cấp, đơn vị lắp đặt, hạn bảo hành</li>
+                  <li class="t-leaf">Vị trí địa lý (tọa độ trên sơ đồ tầng)</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">4.3 Vòng đời tài sản</span>
+                <ul>
+                  <li class="t-leaf">Trạng thái: Đang hoạt động / Bảo trì / Ngừng / Hỏng / Thanh lý</li>
+                  <li class="t-leaf">Lịch sử bảo trì toàn bộ (WO + PM)</li>
+                  <li class="t-leaf">Chi phí tích lũy (Total Cost of Ownership)</li>
+                  <li class="t-leaf">Dự báo tuổi thọ và thời điểm thay thế</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">📦 5. QUẢN LÝ VẬT TƯ &amp; KHO (INVENTORY)</span>
+            <ul>
+              <li><span class="t-sub">5.1 Danh mục vật tư</span>
+                <ul>
+                  <li class="t-leaf">Mã vật tư, tên, mô tả, đơn vị tính</li>
+                  <li class="t-leaf">Phân loại: vật tư thường / phụ tùng thay thế / hóa chất / công cụ</li>
+                  <li class="t-leaf">Vị trí kho (kệ, ô, tủ)</li>
+                  <li class="t-leaf">Mức tồn kho tối thiểu, tối đa, điểm đặt hàng lại</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">5.2 Giao dịch kho</span>
+                <ul>
+                  <li class="t-leaf">Nhập kho: từ purchase order, từ bàn giao</li>
+                  <li class="t-leaf">Xuất kho: liên kết với WO cụ thể</li>
+                  <li class="t-leaf">Điều chuyển giữa các kho / tòa nhà</li>
+                  <li class="t-leaf">Kiểm kê định kỳ</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">5.3 Purchase Order (Mua hàng)</span>
+                <ul>
+                  <li class="t-leaf">Tạo yêu cầu mua vật tư từ WO hoặc cảnh báo tồn kho</li>
+                  <li class="t-leaf">Phê duyệt đa cấp (KTV → Quản lý → BGĐ)</li>
+                  <li class="t-leaf">Theo dõi trạng thái đơn hàng</li>
+                  <li class="t-leaf">Lịch sử mua hàng và so sánh nhà cung cấp</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">👷 6. QUẢN LÝ NHÂN SỰ &amp; PHÂN CÔNG</span>
+            <ul>
+              <li><span class="t-sub">6.1 Hồ sơ kỹ thuật viên</span>
+                <ul>
+                  <li class="t-leaf">Thông tin cá nhân, phòng ban, tòa nhà phụ trách</li>
+                  <li class="t-leaf">Chuyên môn, chứng chỉ hành nghề (điện, lạnh, PCCC...)</li>
+                  <li class="t-leaf">Lịch trực, ca làm việc</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">6.2 Phân công &amp; Điều phối</span>
+                <ul>
+                  <li class="t-leaf">Gán WO tự động theo kỹ năng và vị trí địa lý</li>
+                  <li class="t-leaf">Xem workload của từng KTV</li>
+                  <li class="t-leaf">Phân công thay thế khi KTV nghỉ phép</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">6.3 Theo dõi giờ công</span>
+                <ul>
+                  <li class="t-leaf">Check-in / check-out GPS khi đến hiện trường</li>
+                  <li class="t-leaf">Tổng hợp giờ công theo ngày / tuần</li>
+                  <li class="t-leaf">Báo cáo năng suất kỹ thuật viên</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">📈 7. BÁO CÁO &amp; PHÂN TÍCH (REPORTING)</span>
+            <ul>
+              <li><span class="t-sub">7.1 Báo cáo vận hành</span>
+                <ul>
+                  <li class="t-leaf">Tổng hợp WO theo trạng thái / loại / ưu tiên / tòa nhà</li>
+                  <li class="t-leaf">Tỷ lệ PM hoàn thành đúng hạn (PM Compliance)</li>
+                  <li class="t-leaf">MTTR (Mean Time to Repair) theo thiết bị / hệ thống</li>
+                  <li class="t-leaf">MTBF (Mean Time Between Failures)</li>
+                  <li class="t-leaf">Báo cáo sự cố lặp lại (Recurring failures)</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">7.2 Báo cáo chi phí</span>
+                <ul>
+                  <li class="t-leaf">Chi phí bảo trì theo tòa nhà / hệ thống / thiết bị / tháng</li>
+                  <li class="t-leaf">Phân tích nhân công vs vật tư</li>
+                  <li class="t-leaf">So sánh chi phí kế hoạch vs thực tế</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">7.3 Báo cáo tùy chỉnh</span>
+                <ul>
+                  <li class="t-leaf">Drag &amp; drop report builder</li>
+                  <li class="t-leaf">Xuất PDF / Excel</li>
+                  <li class="t-leaf">Gửi báo cáo tự động qua email theo lịch</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">🔔 8. THÔNG BÁO &amp; GIAO TIẾP</span>
+            <ul>
+              <li class="t-leaf">Push notification mobile (WO mới được giao, deadline sắp đến)</li>
+              <li class="t-leaf">Email notification theo sự kiện có thể cấu hình</li>
+              <li class="t-leaf">Ghi chú / Comment thread trong từng WO</li>
+              <li class="t-leaf">Thông báo toàn hệ thống (maintenance window, thông tin kỹ thuật)</li>
+              <li class="t-leaf">Nhắc nhở PM sắp đến hạn (tự động)</li>
+            </ul>
+          </li>
+
+          <li><span class="t-module">⚙️ 9. CẤU HÌNH HỆ THỐNG (ADMIN &amp; SETTINGS)</span>
+            <ul>
+              <li><span class="t-sub">9.1 Quản lý người dùng &amp; Phân quyền</span>
+                <ul>
+                  <li class="t-leaf">Roles: Super Admin / Quản lý / Tổ trưởng / Kỹ thuật viên / Tenant</li>
+                  <li class="t-leaf">Phân quyền theo module, theo tòa nhà, theo hành động</li>
+                  <li class="t-leaf">Hỗ trợ SSO (Google, Microsoft Azure AD)</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">9.2 Cấu hình nghiệp vụ</span>
+                <ul>
+                  <li class="t-leaf">Loại WO, trạng thái WO, mức ưu tiên</li>
+                  <li class="t-leaf">Quy trình duyệt (Approval workflow) theo loại WO</li>
+                  <li class="t-leaf">SLA templates theo loại sự cố</li>
+                  <li class="t-leaf">Danh mục hệ thống M&amp;E, loại thiết bị</li>
+                  <li class="t-leaf">Cấu hình tòa nhà, tầng, khu vực</li>
+                </ul>
+              </li>
+              <li><span class="t-sub">9.3 Tích hợp &amp; Dữ liệu</span>
+                <ul>
+                  <li class="t-leaf">API keys management</li>
+                  <li class="t-leaf">Webhook configuration</li>
+                  <li class="t-leaf">Import dữ liệu từ Excel (thiết bị, vật tư, người dùng)</li>
+                  <li class="t-leaf">Export toàn bộ dữ liệu (backup)</li>
+                  <li class="t-leaf">Audit log hệ thống</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+
+        </ul>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB 4: SCREENS ===== -->
+<div id="tab-screens" class="section">
+  <div class="intro">
+    <strong>18 màn hình / trang chính</strong> cần có trong webapp CMMS nội bộ cho tòa nhà M&amp;E. Được phân loại theo độ ưu tiên MVP và Phase 2.
+  </div>
+  <div class="legend">
+    <div class="legend-item"><span class="stag mvp">🔴 MVP</span> &nbsp;Cần build ngay trong Phase 1</div>
+    <div class="legend-item"><span class="stag p2">⚪ Phase 2</span> &nbsp;Mở rộng sau khi có người dùng thực</div>
+    <div class="legend-item"><span class="stag role">👤 Role</span> &nbsp;Đối tượng sử dụng chính</div>
+  </div>
+  <div class="screens-grid">
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">1</span><span class="screen-name">Dashboard Tổng quan</span></div>
+      <div class="screen-desc">Màn hình chính sau đăng nhập. KPI nổi bật theo role. Widgets tùy chỉnh: WO đang mở, PM sắp đến hạn, thiết bị đang hỏng, biểu đồ xu hướng sự cố.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Quản lý / KTV</span><span class="stag module">Dashboard</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">2</span><span class="screen-name">Danh sách Work Orders</span></div>
+      <div class="screen-desc">Bảng tổng hợp tất cả WO với filter đa chiều: trạng thái, loại, ưu tiên, kỹ thuật viên, tòa nhà, thời gian. Hành động nhanh: duyệt, phân công, đóng WO.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Quản lý / KTV</span><span class="stag module">Work Order</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">3</span><span class="screen-name">Chi tiết Work Order</span></div>
+      <div class="screen-desc">Đầy đủ thông tin WO: mô tả, thiết bị, KTV được giao, checklist các bước, lịch sử cập nhật timeline, ảnh đính kèm, vật tư dùng, thời gian thực tế làm việc.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 KTV / Quản lý</span><span class="stag module">Work Order</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">4</span><span class="screen-name">Tạo / Chỉnh sửa Work Order</span></div>
+      <div class="screen-desc">Form tạo WO mới: loại WO, mô tả sự cố, thiết bị liên quan, mức ưu tiên, hạn xử lý (SLA), phân công KTV, đính kèm ảnh / tài liệu. Lưu nháp trước khi gửi.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Quản lý / KTV / Tenant</span><span class="stag module">Work Order</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">5</span><span class="screen-name">Lịch Bảo trì PM (Calendar)</span></div>
+      <div class="screen-desc">Calendar view tháng/tuần/ngày cho toàn bộ PM. Filter theo tòa nhà, hệ thống M&amp;E, KTV. Màu sắc phân biệt trạng thái: đã làm / sắp đến hạn / quá hạn. Click để xem chi tiết hoặc tạo WO.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Quản lý / KTV</span><span class="stag module">PM</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">6</span><span class="screen-name">Cấu hình Lịch PM</span></div>
+      <div class="screen-desc">Thiết lập kế hoạch PM cho từng thiết bị: tần suất, ngày thực hiện, KTV phụ trách, template checklist áp dụng, thông báo nhắc nhở. Hỗ trợ time-based và meter-based.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Quản lý kỹ thuật</span><span class="stag module">PM</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">7</span><span class="screen-name">Danh sách Thiết bị / Tài sản</span></div>
+      <div class="screen-desc">Cây phân cấp dạng tree: Tòa nhà → Tầng → Hệ thống → Thiết bị. Tìm kiếm tức thì, filter theo hệ thống M&amp;E. Trạng thái hoạt động realtime. Nhanh chóng mở WO từ đây.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Tất cả</span><span class="stag module">Asset</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">8</span><span class="screen-name">Chi tiết Thiết bị</span></div>
+      <div class="screen-desc">Hồ sơ đầy đủ: specs kỹ thuật, QR code in được, tài liệu đính kèm (catalogue/manual/bản vẽ), tab lịch sử WO, tab lịch PM, chi phí tích lũy, thông tin nhà cung cấp &amp; bảo hành.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 KTV / Quản lý</span><span class="stag module">Asset</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">9</span><span class="screen-name">Quản lý Vật tư / Kho</span></div>
+      <div class="screen-desc">Danh sách vật tư với tồn kho hiện tại, điểm đặt hàng lại, vị trí kho. Nhập/xuất kho liên kết với WO. Lịch sử giao dịch. Highlight đỏ khi tồn kho dưới mức tối thiểu.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Thủ kho / Quản lý</span><span class="stag module">Inventory</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">10</span><span class="screen-name">Quét QR Code (Mobile)</span></div>
+      <div class="screen-desc">Màn hình mobile scan QR code trên thiết bị → hiển thị ngay hồ sơ thiết bị, tạo WO mới, xem lịch sử bảo trì. Tối ưu cho KTV hiện trường. Không cần nhớ mã thiết bị.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 KTV hiện trường</span><span class="stag module">Mobile</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">11</span><span class="screen-name">Portal Tiếp nhận Yêu cầu</span></div>
+      <div class="screen-desc">Trang đơn giản cho cư dân / tenant báo cáo sự cố: chọn vị trí, mô tả sự cố, đính kèm ảnh. Đăng nhập đơn giản hoặc link riêng cho từng tòa nhà. Tự động tạo WO và gửi xác nhận.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Tenant / Cư dân</span><span class="stag module">Work Order</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">12</span><span class="screen-name">Báo cáo &amp; Analytics</span></div>
+      <div class="screen-desc">Hub báo cáo tổng hợp: WO multi-dimension, KPI bảo trì (MTTR, MTBF, PM compliance %), biểu đồ xu hướng, phân tích chi phí. Xuất PDF/Excel. Gửi báo cáo tự động định kỳ.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Giám đốc / Quản lý</span><span class="stag module">Reporting</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">13</span><span class="screen-name">Quản lý Người dùng &amp; Phân quyền</span></div>
+      <div class="screen-desc">Danh sách user với role, phòng ban, tòa nhà phụ trách. CRUD tài khoản, phân quyền chi tiết theo module và site. Reset mật khẩu, kích hoạt/vô hiệu hóa tài khoản.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Admin</span><span class="stag module">Admin</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">14</span><span class="screen-name">Thông báo &amp; Cài đặt cá nhân</span></div>
+      <div class="screen-desc">Notification center: WO mới, deadline sắp đến, cảnh báo hệ thống. Cài đặt loại thông báo (email/push). Hồ sơ cá nhân, đổi mật khẩu, cài đặt ngôn ngữ / múi giờ.</div>
+      <div class="screen-tags"><span class="stag mvp">🔴 MVP</span><span class="stag role">👤 Tất cả</span><span class="stag module">System</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">15</span><span class="screen-name">Lịch trực &amp; Phân công KTV</span></div>
+      <div class="screen-desc">Lịch trực theo ca (sáng/chiều/tối) của tất cả KTV. Workload hiện tại từng người. Phân công thay thế khi nghỉ. Xem theo tuần/tháng. Kéo thả điều chỉnh ca trực.</div>
+      <div class="screen-tags"><span class="stag p2">⚪ Phase 2</span><span class="stag role">👤 Quản lý</span><span class="stag module">Scheduling</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">16</span><span class="screen-name">Purchase Order (Mua hàng)</span></div>
+      <div class="screen-desc">Tạo đề xuất mua vật tư từ WO hoặc cảnh báo tồn kho. Phê duyệt đa cấp với workflow rõ ràng. Theo dõi trạng thái đơn hàng. So sánh giá nhà cung cấp. Lịch sử mua hàng.</div>
+      <div class="screen-tags"><span class="stag p2">⚪ Phase 2</span><span class="stag role">👤 Thủ kho / Quản lý</span><span class="stag module">Inventory</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">17</span><span class="screen-name">Thư viện Checklist / SOP</span></div>
+      <div class="screen-desc">Quản lý thư viện template checklist bảo trì chuẩn hóa cho từng loại thiết bị M&amp;E: HVAC, biến thế, thang máy, máy bơm, PCCC... Drag &amp; drop tạo checklist mới. Version control.</div>
+      <div class="screen-tags"><span class="stag p2">⚪ Phase 2</span><span class="stag role">👤 Quản lý kỹ thuật</span><span class="stag module">PM / WO</span></div>
+    </div>
+
+    <div class="screen-card">
+      <div class="screen-header"><span class="screen-num">18</span><span class="screen-name">Quản lý Nhà cung cấp</span></div>
+      <div class="screen-desc">Danh sách vendor: thông tin liên hệ, dịch vụ cung cấp, rating chất lượng, hợp đồng đính kèm, lịch sử WO thuê ngoài, tổng chi phí đã thanh toán. So sánh chi phí giữa các vendor.</div>
+      <div class="screen-tags"><span class="stag p2">⚪ Phase 2</span><span class="stag role">👤 Quản lý</span><span class="stag module">Vendor</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== TAB 5: TECH STACK ===== -->
+<div id="tab-techstack" class="section">
+  <div class="intro">
+    Gợi ý tech stack để xây dựng CMMS nội bộ nhanh, bền vững và dễ mở rộng. Ưu tiên cho team nhỏ (2–5 dev), tốc độ build nhanh, chi phí hosting thấp, dữ liệu lưu nội bộ.
+  </div>
+
+  <div class="card" style="background:#eff6ff;border-color:#bfdbfe;">
+    <div class="card-title" style="color:#1e40af;">⚡ Lộ trình MVP — Build trong 3 tháng</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;">
+      <div style="padding:10px 18px;border-radius:8px;background:#dcfce7;border:1px solid #86efac;">
+        <div style="font-weight:700;color:#166534;font-size:12px;">Tháng 1 – Foundation</div>
+        <div style="font-size:11px;color:#166534;margin-top:3px;">Auth + Asset cây phân cấp + WO cơ bản + Mobile QR scan</div>
+      </div>
+      <div style="padding:10px 18px;border-radius:8px;background:#dbeafe;border:1px solid #93c5fd;">
+        <div style="font-weight:700;color:#1e40af;font-size:12px;">Tháng 2 – Core</div>
+        <div style="font-size:11px;color:#1e40af;margin-top:3px;">PM Calendar + Inventory + Notifications + Tenant Portal</div>
+      </div>
+      <div style="padding:10px 18px;border-radius:8px;background:#f3e8ff;border:1px solid #c4b5fd;">
+        <div style="font-weight:700;color:#6b21a8;font-size:12px;">Tháng 3 – Analytics</div>
+        <div style="font-size:11px;color:#6b21a8;margin-top:3px;">Dashboard KPI + Báo cáo + Tối ưu performance + UAT</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stack-grid">
+
+    <div class="stack-card">
+      <span class="stack-layer layer-fe">🖥️ Frontend – Web</span>
+      <div class="stack-item">
+        <div class="si-name">Next.js 15 (App Router) <span class="si-badge badge-rec">★ Khuyên dùng</span></div>
+        <div class="si-desc">React framework full-stack: SSR, API routes, file-based routing. Build cả web app và API trong một codebase.</div>
+        <div class="si-reason">✓ Tốc độ phát triển nhanh nhất, ecosystem lớn nhất</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">shadcn/ui + Tailwind CSS</div>
+        <div class="si-desc">Component library accessible, copy-paste vào project. Không cần design system từ đầu. Tailwind cho styling nhanh không viết CSS riêng.</div>
+        <div class="si-reason">✓ Tiết kiệm 2–3 tuần so với build UI từ đầu</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">TanStack Query (React Query)</div>
+        <div class="si-desc">Data fetching, caching, sync với server state. Auto refetch, optimistic updates, loading/error states.</div>
+        <div class="si-reason">✓ Giải quyết 80% vấn đề state management phức tạp</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">FullCalendar.io</div>
+        <div class="si-desc">Calendar component hoàn chỉnh cho PM Schedule: month/week/day view, drag &amp; drop, event coloring.</div>
+        <div class="si-reason">✓ Tiết kiệm 3–4 tuần build calendar từ đầu</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Recharts / Chart.js</div>
+        <div class="si-desc">Biểu đồ dashboard: cột, đường, donut cho KPI, analytics. Responsive, customizable.</div>
+      </div>
+    </div>
+
+    <div class="stack-card">
+      <span class="stack-layer layer-mob">📱 Mobile App</span>
+      <div class="stack-item">
+        <div class="si-name">Expo (React Native) <span class="si-badge badge-rec">★ Khuyên dùng</span></div>
+        <div class="si-desc">Cross-platform iOS + Android. Share code TypeScript với web frontend. Expo Go để test nhanh không cần build. OTA updates.</div>
+        <div class="si-reason">✓ Một team JS/TS build cả web + mobile, không cần native dev</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">expo-camera + QR Scanner</div>
+        <div class="si-desc">Quét QR code thiết bị tức thì trên điện thoại KTV. Tính năng then chốt cho hiện trường.</div>
+        <div class="si-reason">✓ KTV scan → xem hồ sơ thiết bị → tạo WO trong 30 giây</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">WatermelonDB (Offline-first)</div>
+        <div class="si-desc">Local database SQLite cho mobile. Sync thông minh khi có mạng. KTV làm việc dưới hầm kỹ thuật, thang máy yếu mạng.</div>
+        <div class="si-reason">✓ Bắt buộc cho môi trường tòa nhà M&amp;E</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Expo Notifications</div>
+        <div class="si-desc">Push notification cho WO mới, deadline, cảnh báo PM. Cross-platform, free.</div>
+      </div>
+    </div>
+
+    <div class="stack-card">
+      <span class="stack-layer layer-be">⚙️ Backend</span>
+      <div class="stack-item">
+        <div class="si-name">Option A: Supabase <span class="si-badge badge-rec">★ Nhanh nhất</span></div>
+        <div class="si-desc">BaaS open-source: PostgreSQL + Auth + Storage + Realtime + Edge Functions. Như Firebase nhưng self-hostable và dùng SQL thật.</div>
+        <div class="si-reason">✓ Giảm 60–70% công việc backend. MVP trong 4–6 tuần thay vì 3 tháng</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Option B: Node.js + Fastify <span class="si-badge badge-mvp">Full control</span></div>
+        <div class="si-desc">Custom REST/GraphQL API. Fastify nhanh hơn Express 2x. Phù hợp nếu cần logic nghiệp vụ phức tạp hoặc tích hợp BMS/SCADA.</div>
+        <div class="si-reason">✓ Toàn quyền kiểm soát, dễ scale, phù hợp team có BE dev</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Prisma ORM</div>
+        <div class="si-desc">Type-safe database access, migrations tự động, schema trực quan bằng code. Dùng với Option B.</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">BullMQ (Job Queue)</div>
+        <div class="si-desc">Background jobs: tự động tạo WO từ lịch PM, gửi email thông báo, tạo báo cáo định kỳ, nhắc nhở deadline.</div>
+        <div class="si-reason">✓ Cần thiết cho automation PM → WO</div>
+      </div>
+    </div>
+
+    <div class="stack-card">
+      <span class="stack-layer layer-db">🗄️ Database &amp; Storage</span>
+      <div class="stack-item">
+        <div class="si-name">PostgreSQL <span class="si-badge badge-rec">★ Bắt buộc</span></div>
+        <div class="si-desc">RDBMS tốt nhất cho CMMS: dữ liệu quan hệ phức tạp (asset hierarchy, WO, inventory), JSONB cho dữ liệu linh hoạt (checklist, specs), full-text search.</div>
+        <div class="si-reason">✓ CMMS là relational data — PostgreSQL là lựa chọn đúng nhất</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Redis</div>
+        <div class="si-desc">Cache session user, queue jobs BullMQ, pub/sub cho realtime notification dashboard.</div>
+        <div class="si-reason">✓ Phase 2 khi cần scale hoặc realtime features</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">MinIO / Supabase Storage</div>
+        <div class="si-desc">Object storage S3-compatible cho ảnh WO, tài liệu thiết bị, bản vẽ PDF, manual. Self-hosted hoặc dùng Supabase Storage.</div>
+        <div class="si-reason">✓ File storage không thể thiếu cho CMMS</div>
+      </div>
+    </div>
+
+    <div class="stack-card">
+      <span class="stack-layer layer-infra">🚀 Hạ tầng &amp; DevOps</span>
+      <div class="stack-item">
+        <div class="si-name">Docker + Docker Compose</div>
+        <div class="si-desc">Containerize toàn bộ stack: Next.js, API, PostgreSQL, Redis, MinIO. Dev local = Production. Dễ backup và migrate.</div>
+        <div class="si-reason">✓ Bắt buộc cho hệ thống nội bộ self-hosted</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">VPS hoặc Server nội bộ <span class="si-badge badge-mvp">Self-hosted</span></div>
+        <div class="si-desc">Hetzner (Germany, giá tốt) hoặc DigitalOcean. Hoặc server nội bộ công ty. Dữ liệu không ra ngoài, phù hợp yêu cầu bảo mật.</div>
+        <div class="si-reason">✓ 8 CPU, 16GB RAM đủ cho 100 user đồng thời (~$50/tháng VPS)</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Nginx + Let's Encrypt SSL</div>
+        <div class="si-desc">Reverse proxy, HTTPS miễn phí, load balancing, static file serving. Auto-renew SSL certificate.</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">GitHub Actions CI/CD</div>
+        <div class="si-desc">Auto test + build + deploy khi push code lên GitHub. Miễn phí cho repo private. Zero-downtime deploy.</div>
+      </div>
+    </div>
+
+    <div class="stack-card">
+      <span class="stack-layer layer-tool">🛠️ Công cụ &amp; Thư viện bổ trợ</span>
+      <div class="stack-item">
+        <div class="si-name">TypeScript (toàn bộ stack)</div>
+        <div class="si-desc">Type safety từ DB schema đến UI. Giảm bug runtime 40–60%. Bắt buộc cho dự án trung-dài hạn có nhiều dev.</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">react-qr-code + qrcode (Node)</div>
+        <div class="si-desc">Tạo QR code in ra dán lên từng thiết bị. KTV scan = mở ngay hồ sơ. Game changer cho hiện trường.</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Nodemailer + Resend/SendGrid</div>
+        <div class="si-desc">Gửi email thông báo WO, deadline, báo cáo tự động định kỳ. Resend có free tier 3000 email/tháng.</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Zod (Validation)</div>
+        <div class="si-desc">Schema validation cho cả API input và form frontend. Share schema giữa client và server.</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">React Hook Form</div>
+        <div class="si-desc">Form management hiệu suất cao cho WO form, Asset form, PM config form.</div>
+      </div>
+      <div class="stack-item">
+        <div class="si-name">Playwright (E2E Testing)</div>
+        <div class="si-desc">Test tự động các luồng quan trọng: tạo WO, duyệt WO, PM calendar. Phase 2.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tip-box">
+    <h3>💡 5 Lời khuyên thực tiễn khi build CMMS nội bộ</h3>
+    <p><strong>1. Bắt đầu từ Work Order + Asset, dùng ngay từ tuần đầu tiên:</strong> Đây là 2 module tạo giá trị nhất. Build và deploy cho team dùng thật ngay, rồi mới mở rộng sang PM Calendar, Inventory. Tránh build toàn bộ trước khi có feedback.</p>
+    <p><strong>2. QR Code là "game changer" cho hiện trường:</strong> In QR dán lên từng thiết bị M&amp;E. KTV chỉ cần scan → xem hồ sơ thiết bị → tạo WO trong 30 giây. Loại bỏ hoàn toàn việc nhập tay mã thiết bị, giảm sai sót.</p>
+    <p><strong>3. Mobile offline là yêu cầu bắt buộc:</strong> KTV làm việc trong hầm kỹ thuật, giếng thang máy, tầng hầm — sóng 3G/4G không ổn định. App phải hoạt động offline và sync khi có mạng.</p>
+    <p><strong>4. Không cần AI/Predictive từ đầu:</strong> Tập trung có data sạch, quy trình nhập liệu nhất quán trong 6–12 tháng đầu. Khi đủ data lịch sử mới nên nghĩ đến predictive maintenance.</p>
+    <p><strong>5. Cân nhắc dùng open-source base:</strong> <strong><a href="https://github.com/Grashjs/cmms" style="color:#1e40af;">Grashjs/cmms</a></strong> là CMMS open-source self-hosted (React + Node + PostgreSQL) có thể dùng làm điểm khởi đầu, customize thay vì build từ đầu hoàn toàn. Tiết kiệm 4–6 tuần phát triển.</p>
+  </div>
+
+</div>
+
+</div><!-- /content -->
+
+<script>
+function showTab(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+
+
+
+</body></html>
