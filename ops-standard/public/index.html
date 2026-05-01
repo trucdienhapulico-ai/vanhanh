@@ -86,6 +86,7 @@
           <div class="nav">
             <button id="nav-records" onclick="showPage('records')">Nhật ký vận hành</button>
             <button id="nav-checklist" onclick="showPage('checklist')">Checklist vận hành</button>
+            <button id="nav-ui-map" onclick="showPage('ui-map')">Sơ đồ UI / góp ý</button>
             <button id="nav-kyson" onclick="showPage('kyson')">Dữ liệu Kyson</button>
             <button id="nav-code" class="hidden" onclick="showPage('code')">Phiên bản code webapp</button>
             <button id="nav-users" class="hidden" onclick="showPage('users')">Quản lý người dùng</button>
@@ -214,6 +215,27 @@
           <table>
             <thead><tr><th>Người thực hiện</th><th>Đã check</th><th>Tổng mục có log</th></tr></thead>
             <tbody id="checklistReportUsersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="page-ui-map" class="page">
+      <div class="card">
+        <h2>Sơ đồ UI / góp ý</h2>
+        <div class="muted">Dùng bảng này để gọi đúng tên khu vực khi góp ý giao diện. Mỗi lần đổi UI, bảng này phải cập nhật theo.</div>
+        <div class="grid" style="margin-top:12px">
+          <div class="stat"><span class="muted">Mẫu góp ý nhanh</span><b>Trang > khu vực > thành phần > sửa thành gì</b></div>
+          <div class="stat"><span class="muted">Ví dụ</span><b>Checklist > Danh sách thiết bị > nút Lưu kết quả > đưa sát ô ghi chú</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Bảng định vị UI hiện tại</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Trang</th><th>Khu vực</th><th>Thành phần</th><th>Mục đích</th><th>Cách góp ý đúng chỗ</th></tr></thead>
+            <tbody id="uiMapBody"></tbody>
           </table>
         </div>
       </div>
@@ -374,7 +396,24 @@
   </div>
 
 <script>
-const PAGE_IDS = ['records','checklist','kyson','code','users'];
+const PAGE_IDS = ['records','checklist','ui-map','kyson','code','users'];
+const UI_MAP_ROWS = [
+  ['Nhật ký vận hành','Form tạo nhật ký','Tiêu đề / trạng thái / ghi chú / nút Lưu nhật ký','Ghi nhận sự cố hoặc công việc vận hành','Nhật ký vận hành > Form tạo nhật ký > [tên ô/nút] > sửa thành ...'],
+  ['Nhật ký vận hành','Bảng lịch sử nhật ký','Cột thời gian / tiêu đề / trạng thái / người tạo / ghi chú','Xem nhanh lịch sử vận hành','Nhật ký vận hành > Bảng lịch sử nhật ký > cột ... > sửa thành ...'],
+  ['Checklist vận hành','Form thiết bị','Tên thiết bị / khu vực / ghi chú / nút Lưu thiết bị','Tạo hoặc sửa thiết bị cần kiểm tra','Checklist vận hành > Form thiết bị > [ô/nút] > sửa thành ...'],
+  ['Checklist vận hành','Danh sách thiết bị cần check','Card thiết bị / nút Sửa thiết bị / Xóa thiết bị','Quản lý từng thiết bị checklist','Checklist vận hành > Danh sách thiết bị cần check > card thiết bị > sửa thành ...'],
+  ['Checklist vận hành','Form hạng mục của thiết bị','Tên hạng mục / ghi chú hướng dẫn / nút Thêm-Cập nhật / Hủy sửa','Thêm mới hoặc sửa tên hạng mục đã tạo','Checklist vận hành > [tên thiết bị] > Form hạng mục > sửa thành ...'],
+  ['Checklist vận hành','Hạng mục checklist','Checkbox Hoàn thành / nút Lưu kết quả / Sửa mục / Xóa','Thao tác check từng hạng mục ngoài hiện trường','Checklist vận hành > Hạng mục > [tên nút] > sửa thành ...'],
+  ['Checklist vận hành','Kết quả check','Ô ghi chú hiện trạng / thời gian / ảnh / lịch sử gần đây','Lưu bằng chứng và trạng thái kiểm tra','Checklist vận hành > Hạng mục > ghi chú-thời gian-ảnh > sửa thành ...'],
+  ['Checklist vận hành','Bộ lọc checklist','Ngày làm việc / ca / chỉ hiện mục chưa check','Giúp nhân viên thấy đúng phần việc cần làm','Checklist vận hành > Bộ lọc checklist > [bộ lọc] > sửa thành ...'],
+  ['Checklist vận hành','Báo cáo checklist','Bộ lọc ngày / ca / người thực hiện / bảng tổng hợp','Kiểm soát kết quả theo ngày và nhân viên','Checklist vận hành > Báo cáo checklist > [bảng/bộ lọc] > sửa thành ...'],
+  ['Sơ đồ UI / góp ý','Bảng định vị UI','Danh sách trang / khu vực / thành phần','Chuẩn hóa cách góp ý để sửa đúng chỗ','Sơ đồ UI / góp ý > Bảng định vị UI > dòng ... > cập nhật ...'],
+  ['Dữ liệu Kyson','Bộ lọc đồng bộ','Từ ngày / Đến ngày / nút Đồng bộ Kyson','Đồng bộ dữ liệu nguồn Kyson','Dữ liệu Kyson > Bộ lọc đồng bộ > [ô/nút] > sửa thành ...'],
+  ['Dữ liệu Kyson','Cài đặt sync tự động','Bật-tắt / giờ / múi giờ / số ngày lấy lại','Cấu hình tự đồng bộ theo lịch','Dữ liệu Kyson > Cài đặt sync tự động > [ô/nút] > sửa thành ...'],
+  ['Dữ liệu Kyson','Khối thống kê và bảng dữ liệu','Thẻ thống kê / báo cáo ngày / danh sách bơm / cảm biến / log','Theo dõi dữ liệu nước và trạng thái hệ thống','Dữ liệu Kyson > [tên bảng/thẻ] > sửa thành ...'],
+  ['Phiên bản code webapp','Quản lý snapshot code','Phiên bản hiện tại / tạo snapshot / danh sách restore','Quản lý version code webapp','Phiên bản code webapp > [nút/bảng] > sửa thành ...'],
+  ['Quản lý người dùng','Form và bảng user','Tài khoản / mật khẩu / vai trò / danh sách user','Tạo và kiểm soát tài khoản nội bộ','Quản lý người dùng > [form/bảng] > sửa thành ...'],
+];
 let currentUserRole = null;
 let checklistCanWrite = false;
 let checklistDevicesCache = [];
@@ -410,7 +449,7 @@ function fillTimeZoneOptions(list=[]){
   autoSyncTimeZone.value = uniq.includes(current) ? current : 'UTC';
 }
 function showPage(page){
-  const allowed = new Set(['records','checklist','kyson']);
+  const allowed = new Set(['records','checklist','ui-map','kyson']);
   if(currentUserRole === 'admin'){ allowed.add('code'); allowed.add('users'); }
   if(!allowed.has(page)) page = 'records';
   PAGE_IDS.forEach(id => {
@@ -436,6 +475,9 @@ function renderAutoSync(autoSync={}, scheduler={}, supportedTimeZones=[]){
   const lastError = autoSync.lastError ? ` Lỗi cuối: ${autoSync.lastError}` : '';
   autoSyncMsg.textContent = `${lastRun} ${lastError}`.trim();
   autoSyncMsg.className = autoSync.lastError ? 'err' : 'muted';
+}
+function renderUiMap(){
+  uiMapBody.innerHTML = UI_MAP_ROWS.map(row => `<tr><td>${esc(row[0])}</td><td>${esc(row[1])}</td><td>${esc(row[2])}</td><td>${esc(row[3])}</td><td><code>${esc(row[4])}</code></td></tr>`).join('');
 }
 async function login(){
   try{
@@ -474,6 +516,7 @@ async function boot(){
     document.getElementById('codeBackupBtn').disabled=!admin;
     if(admin) loadUsers();
     setTodayInputs();
+    renderUiMap();
     await Promise.all([loadAppInfo(), loadRecords(), loadChecklistDevices(), loadChecklistReport(), loadKyson(), loadAutoSyncSettings(), admin ? loadCodeBackups() : Promise.resolve()]);
     showPage(initialPage());
   }catch{}

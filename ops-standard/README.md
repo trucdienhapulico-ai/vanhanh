@@ -31,9 +31,23 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 ## Các khu vực chính trong webapp
 - **Nhật ký vận hành**
 - **Checklist vận hành**
+- **Sơ đồ UI / góp ý**
 - **Dữ liệu Kyson**
 - **Phiên bản code webapp** (admin)
 - **Quản lý người dùng** (admin)
+
+## Sơ đồ UI / góp ý
+Webapp có một thẻ riêng tên **Sơ đồ UI / góp ý** để:
+- định vị đúng tên trang / khu vực / thành phần giao diện
+- giúp người dùng góp ý theo mẫu ngắn gọn và trúng chỗ
+- làm bảng kiểm soát khi giao diện thay đổi nhiều lần
+
+Mẫu góp ý chuẩn:
+- `Trang > khu vực > thành phần > sửa thành gì`
+
+Ví dụ:
+- `Checklist vận hành > Hạng mục checklist > nút Lưu kết quả > đưa xuống sát ô ghi chú`
+- `Dữ liệu Kyson > Cài đặt sync tự động > ô Giờ sync hằng ngày > đổi vị trí sang trước ô Múi giờ`
 
 ## Chạy tay để test nhanh
 ```bash
@@ -225,7 +239,7 @@ Mỗi lần lưu checklist sẽ gắn với:
 - ghi chú và hình ảnh (nếu có)
 
 ## Yêu cầu khi thay đổi checklist hoặc tính năng giao diện
-Khi thêm hoặc sửa tính năng trong webapp, cần cập nhật lại `ops-standard/README.md` nếu có thay đổi liên quan đến một trong các mục sau:
+Khi thêm hoặc sửa tính năng trong webapp, cần cập nhật lại `ops-standard/README.md` **và bảng trong thẻ `Sơ đồ UI / góp ý`** nếu có thay đổi liên quan đến một trong các mục sau:
 - cho phép chỉnh sửa tên hạng mục đã tạo
 - thêm hoặc đổi hành vi của checkbox đánh dấu hoàn thành
 - thêm / sửa trường thời gian kiểm tra
@@ -238,6 +252,7 @@ Khi thêm hoặc sửa tính năng trong webapp, cần cập nhật lại `ops-s
 
 Khuyến nghị khi sửa tính năng:
 - nếu thay đổi hành vi người dùng nhìn thấy được, phải cập nhật phần **Tính năng**
+- nếu thêm, bớt, đổi tên hoặc đổi vị trí khu vực giao diện, phải cập nhật thẻ **Sơ đồ UI / góp ý** trong webapp
 - nếu thêm dữ liệu mới vào checklist, phải mô tả ngắn trong phần **Dữ liệu chính** hoặc **Checklist vận hành**
 - nếu thay đổi thao tác vận hành, phải cập nhật phần **Lệnh vận hành thường dùng** hoặc hướng dẫn liên quan
 
