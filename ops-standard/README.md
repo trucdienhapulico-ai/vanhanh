@@ -259,6 +259,7 @@ Trong thẻ **Checklist vận hành**, người dùng có thể:
 - lưu ghi chú hiện trạng / bất thường
 - đính kèm hình ảnh tại hiện trường
 - xem lịch sử check gần đây
+- tạo link riêng cho từng thiết bị để mở thẳng card thiết bị (phù hợp in QR dán ngoài hiện trường)
 - lọc theo ngày làm việc, ca vận hành và trạng thái chưa check
 - xem báo cáo checklist theo ngày, ca và người thực hiện
 
@@ -274,6 +275,16 @@ Mỗi lần lưu checklist sẽ gắn với:
 - người thực hiện
 - thời gian check
 - ghi chú và hình ảnh (nếu có)
+
+## Link riêng cho từng thiết bị
+Trong phần **Danh sách thiết bị cần check**, mỗi card thiết bị có:
+- 1 link riêng mở thẳng đúng thiết bị
+- nút **Copy link riêng**
+
+Mục đích:
+- in QR dán lên thiết bị
+- nhân viên quét là vào thẳng đúng card thiết bị cần thao tác
+- giảm nhầm lẫn khi danh sách thiết bị dài
 
 ## Yêu cầu khi thay đổi checklist hoặc tính năng giao diện
 Khi thêm hoặc sửa tính năng trong webapp, cần cập nhật lại `ops-standard/README.md` **và bảng trong thẻ `Sơ đồ UI / góp ý`** nếu có thay đổi liên quan đến một trong các mục sau:

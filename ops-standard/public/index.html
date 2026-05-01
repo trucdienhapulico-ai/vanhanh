@@ -48,6 +48,8 @@
     .history-list{margin:8px 0 0;padding-left:18px}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
     .report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .link-box{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+    .link-box input{min-width:260px;background:#f8fbfb}
     @media (max-width: 900px){
       .layout{grid-template-columns:1fr}
       .sidebar{position:static}
@@ -420,7 +422,7 @@ const UI_MAP_ROWS = [
   ['Nhật ký vận hành','Form tạo nhật ký','Tiêu đề / trạng thái / ghi chú / nút Lưu nhật ký','Ghi nhận sự cố hoặc công việc vận hành','Nhật ký vận hành > Form tạo nhật ký > [tên ô/nút] > sửa thành ...'],
   ['Nhật ký vận hành','Bảng lịch sử nhật ký','Cột thời gian / tiêu đề / trạng thái / người tạo / ghi chú','Xem nhanh lịch sử vận hành','Nhật ký vận hành > Bảng lịch sử nhật ký > cột ... > sửa thành ...'],
   ['Checklist vận hành','Form thiết bị','Tên thiết bị / khu vực / ghi chú / nút Lưu thiết bị','Tạo hoặc sửa thiết bị cần kiểm tra','Checklist vận hành > Form thiết bị > [ô/nút] > sửa thành ...'],
-  ['Checklist vận hành','Danh sách thiết bị cần check','Card thiết bị / nút Sửa thiết bị / Xóa thiết bị','Quản lý từng thiết bị checklist','Checklist vận hành > Danh sách thiết bị cần check > card thiết bị > sửa thành ...'],
+  ['Checklist vận hành','Danh sách thiết bị cần check','Card thiết bị / nút Sửa thiết bị / Xóa thiết bị / link riêng thiết bị','Quản lý từng thiết bị checklist và mở nhanh bằng QR','Checklist vận hành > Danh sách thiết bị cần check > card thiết bị > sửa thành ...'],
   ['Checklist vận hành','Form hạng mục của thiết bị','Tên hạng mục / ghi chú hướng dẫn / nút Thêm-Cập nhật / Hủy sửa','Thêm mới hoặc sửa tên hạng mục đã tạo','Checklist vận hành > [tên thiết bị] > Form hạng mục > sửa thành ...'],
   ['Checklist vận hành','Hạng mục checklist','Checkbox Hoàn thành / nút Lưu kết quả / Sửa mục / Xóa','Thao tác check từng hạng mục ngoài hiện trường','Checklist vận hành > Hạng mục > [tên nút] > sửa thành ...'],
   ['Checklist vận hành','Kết quả check','Ô ghi chú hiện trạng / thời gian / ảnh / lịch sử gần đây','Lưu bằng chứng và trạng thái kiểm tra','Checklist vận hành > Hạng mục > ghi chú-thời gian-ảnh > sửa thành ...'],
@@ -438,6 +440,7 @@ const UI_MAP_ROWS = [
 let currentUserRole = null;
 let checklistCanWrite = false;
 let checklistDevicesCache = [];
+let selectedChecklistDeviceId = null;
 let editingChecklistDeviceId = null;
 let editingChecklistItemId = null;
 
@@ -469,6 +472,38 @@ function fillTimeZoneOptions(list=[]){
   autoSyncTimeZone.innerHTML = uniq.map(tz => `<option value="${esc(tz)}">${esc(tz === 'Asia/Ho_Chi_Minh' ? 'Asia/Ho_Chi_Minh (UTC+7)' : tz)}</option>`).join('');
   autoSyncTimeZone.value = uniq.includes(current) ? current : 'UTC';
 }
+function buildChecklistDeviceLink(deviceId){
+  return `${location.origin}${location.pathname}#checklist/${deviceId}`;
+}
+async function copyText(value){
+  try{
+    if(navigator.clipboard?.writeText){
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  }catch{}
+  return false;
+}
+function copyChecklistDeviceLink(deviceId){
+  const link = buildChecklistDeviceLink(deviceId);
+  copyText(link).then(ok => {
+    if(ok) msg('checklistMsg', `Đã copy link thiết bị: ${link}`, true);
+    else prompt('Copy link thiết bị này:', link);
+  });
+}
+function syncChecklistTargetFromHash(){
+  const raw = location.hash.replace(/^#/, '');
+  if(raw.startsWith('checklist/')){
+    selectedChecklistDeviceId = raw.split('/')[1] || null;
+    return 'checklist';
+  }
+  selectedChecklistDeviceId = null;
+  return raw;
+}
+function updateLocationHash(page){
+  const next = page === 'checklist' && selectedChecklistDeviceId ? `checklist/${selectedChecklistDeviceId}` : page;
+  if(location.hash.replace(/^#/, '') !== next) location.hash = next;
+}
 function showPage(page){
   const allowed = new Set(['records','checklist','ui-map','kyson']);
   if(currentUserRole === 'admin'){ allowed.add('code'); allowed.add('users'); }
@@ -478,10 +513,10 @@ function showPage(page){
     const nav = document.getElementById(`nav-${id}`);
     if(nav) nav.classList.toggle('active', id === page);
   });
-  location.hash = page;
+  updateLocationHash(page);
 }
 function initialPage(){
-  const hash = location.hash.replace('#','');
+  const hash = syncChecklistTargetFromHash();
   return PAGE_IDS.includes(hash) ? hash : 'records';
 }
 function renderAutoSync(autoSync={}, scheduler={}, supportedTimeZones=[]){
@@ -610,13 +645,20 @@ function resetChecklistItemForm(deviceId){
 function handleChecklistFilterChange(){
   renderChecklistDevices();
 }
+function clearChecklistDeviceTarget(){
+  selectedChecklistDeviceId = null;
+  if(location.hash.replace(/^#/, '').startsWith('checklist/')) location.hash = 'checklist';
+  renderChecklistDevices();
+}
 function renderChecklistDevices(){
   const date = getChecklistSelectedDate();
   const shift = getChecklistSelectedShift();
   const onlyUnchecked = !!checklistOnlyUnchecked?.checked;
   const devices = checklistDevicesCache || [];
-  checklistDevicesWrap.innerHTML = devices.length
-    ? devices.map(device => {
+  const filteredDevices = selectedChecklistDeviceId ? devices.filter(device => device.id === selectedChecklistDeviceId) : devices;
+  checklistDevicesWrap.innerHTML = selectedChecklistDeviceId ? `<div class="card"><div class="row"><div><b>Đang mở link riêng cho 1 thiết bị</b><div class="muted">Link này có thể in thành QR để nhân viên quét vào đúng thiết bị.</div></div><div style="display:flex;align-items:end;justify-content:flex-end"><button class="secondary" onclick="clearChecklistDeviceTarget()">Quay lại toàn bộ danh sách</button></div></div></div>` : '';
+  checklistDevicesWrap.innerHTML += filteredDevices.length
+    ? filteredDevices.map(device => {
         const items = (device.items || []).filter(item => {
           const entry = getChecklistEntryFor(item, date, shift);
           return onlyUnchecked ? !(entry && entry.checked) : true;
@@ -634,6 +676,10 @@ function renderChecklistDevices(){
               ${checklistCanWrite ? `<button class="secondary" onclick="editChecklistDevice('${device.id}')">Sửa thiết bị</button>
               <button class="warn" onclick="deleteChecklistDevice('${device.id}')">Xóa thiết bị</button>` : ''}
             </div>
+          </div>
+          <div class="link-box">
+            <input value="${esc(buildChecklistDeviceLink(device.id))}" readonly onclick="this.select()">
+            <button class="secondary" onclick="copyChecklistDeviceLink('${device.id}')">Copy link riêng</button>
           </div>
           ${checklistCanWrite ? `<div class="row" style="margin-top:12px">
             <input id="item-title-${device.id}" placeholder="Tên hạng mục cần check">
@@ -679,6 +725,9 @@ function renderChecklistDevices(){
         </div>`;
       }).join('')
     : '<div class="muted">Chưa có thiết bị checklist nào.</div>';
+  if(selectedChecklistDeviceId && !filteredDevices.length){
+    checklistDevicesWrap.innerHTML = '<div class="card"><div class="err">Không tìm thấy thiết bị từ link QR này.</div><div class="muted">Có thể thiết bị đã bị xóa hoặc đổi dữ liệu.</div></div>';
+  }
 }
 async function loadChecklistDevices(){
   try{
