@@ -154,6 +154,35 @@ function verifyPassword(password, user) {
   const { hash } = hashPassword(password, user.salt);
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(user.hash, 'hex'));
 }
+function normalizeChecklistImage(image = {}) {
+  return {
+    id: image.id || rid(),
+    name: image.name || 'image.jpg',
+    type: image.type || 'image/jpeg',
+    dataUrl: image.dataUrl || '',
+    uploadedAt: image.uploadedAt || now(),
+  };
+}
+function normalizeChecklistItem(item = {}) {
+  return {
+    id: item.id || rid(),
+    title: item.title || 'Hạng mục chưa đặt tên',
+    note: item.note || '',
+    createdAt: item.createdAt || now(),
+    checked: Boolean(item.checked),
+    lastCheckedAt: item.lastCheckedAt || null,
+    lastCheckedBy: item.lastCheckedBy || null,
+    checkNote: item.checkNote || '',
+    images: Array.isArray(item.images) ? item.images.filter(x => x && x.dataUrl).map(normalizeChecklistImage) : [],
+    history: Array.isArray(item.history) ? item.history.slice(-10).map(entry => ({
+      id: entry.id || rid(),
+      checked: Boolean(entry.checked),
+      checkedAt: entry.checkedAt || now(),
+      checkedBy: entry.checkedBy || null,
+      note: entry.note || '',
+    })) : [],
+  };
+}
 function ensureDbShape(db) {
   if (!Array.isArray(db.users)) db.users = [];
   if (!Array.isArray(db.records)) db.records = [];
@@ -165,12 +194,7 @@ function ensureDbShape(db) {
     area: device.area || '',
     note: device.note || '',
     createdAt: device.createdAt || now(),
-    items: Array.isArray(device.items) ? device.items.map(item => ({
-      id: item.id || rid(),
-      title: item.title || 'Hạng mục chưa đặt tên',
-      note: item.note || '',
-      createdAt: item.createdAt || now(),
-    })) : [],
+    items: Array.isArray(device.items) ? device.items.map(normalizeChecklistItem) : [],
   }));
   if (!db.kyson || typeof db.kyson !== 'object') db.kyson = {};
   if (!db.kyson.snapshot || typeof db.kyson.snapshot !== 'object') db.kyson.snapshot = {};
@@ -476,7 +500,7 @@ const server = http.createServer(async (req, res) => {
       if (!device) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
       const body = await parseBody(req);
       if (!body.title) return send(res, 400, { error: 'Thiếu tên hạng mục' });
-      const item = { id: rid(), title: body.title, note: body.note || '', createdAt: now() };
+      const item = normalizeChecklistItem({ id: rid(), title: body.title, note: body.note || '', createdAt: now() });
       device.items.push(item);
       saveDb(db);
       return send(res, 200, { ok: true, item, device });
@@ -494,6 +518,40 @@ const server = http.createServer(async (req, res) => {
       if (!body.title) return send(res, 400, { error: 'Thiếu tên hạng mục' });
       item.title = body.title;
       item.note = body.note || '';
+      saveDb(db);
+      return send(res, 200, { ok: true, item, device });
+    }
+
+    if (req.method === 'POST' && url.pathname.match(/^\/api\/checklist\/devices\/[^/]+\/items\/[^/]+\/check$/)) {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const parts = url.pathname.split('/');
+      const device = db.checklist.devices.find(x => x.id === parts[4]);
+      if (!device) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
+      const item = device.items.find(x => x.id === parts[6]);
+      if (!item) return send(res, 404, { error: 'Không tìm thấy hạng mục' });
+      const body = await parseBody(req);
+      const hasIncomingImages = Array.isArray(body.images);
+      const incomingImages = hasIncomingImages ? body.images : [];
+      if (incomingImages.length > 4) return send(res, 400, { error: 'Tối đa 4 hình cho mỗi lần cập nhật' });
+      for (const image of incomingImages) {
+        if (!image || typeof image.dataUrl !== 'string' || !image.dataUrl.startsWith('data:image/')) {
+          return send(res, 400, { error: 'Dữ liệu hình ảnh không hợp lệ' });
+        }
+        if (image.dataUrl.length > 2_500_000) return send(res, 400, { error: 'Hình ảnh quá lớn, vui lòng chọn ảnh nhỏ hơn ~2MB' });
+      }
+      item.checked = body.checked !== undefined ? Boolean(body.checked) : item.checked;
+      item.lastCheckedAt = body.checkedAt || now();
+      item.lastCheckedBy = me.username;
+      item.checkNote = body.checkNote || '';
+      if (hasIncomingImages && incomingImages.length) item.images = incomingImages.map(normalizeChecklistImage);
+      item.history = [...item.history, {
+        id: rid(),
+        checked: item.checked,
+        checkedAt: item.lastCheckedAt,
+        checkedBy: item.lastCheckedBy,
+        note: item.checkNote,
+      }].slice(-10);
       saveDb(db);
       return send(res, 200, { ok: true, item, device });
     }
