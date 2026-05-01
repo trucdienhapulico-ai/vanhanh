@@ -72,6 +72,7 @@
           <h2>Điều hướng</h2>
           <div class="nav">
             <button id="nav-records" onclick="showPage('records')">Nhật ký vận hành</button>
+            <button id="nav-checklist" onclick="showPage('checklist')">Checklist vận hành</button>
             <button id="nav-kyson" onclick="showPage('kyson')">Dữ liệu Kyson</button>
             <button id="nav-code" class="hidden" onclick="showPage('code')">Phiên bản code webapp</button>
             <button id="nav-users" class="hidden" onclick="showPage('users')">Quản lý người dùng</button>
@@ -106,6 +107,36 @@
           <thead><tr><th>Thời gian</th><th>Tiêu đề</th><th>Trạng thái</th><th>Người tạo</th><th>Ghi chú</th></tr></thead>
           <tbody id="recordsBody"></tbody>
         </table>
+      </div>
+    </section>
+
+    <section id="page-checklist" class="page">
+      <div class="card">
+        <h2>Checklist vận hành</h2>
+        <div class="row">
+          <div>
+            <div class="muted">Tên thiết bị / hạng mục lớn</div>
+            <input id="checkDeviceName" placeholder="vd: Tủ điện bơm số 1">
+          </div>
+          <div>
+            <div class="muted">Khu vực</div>
+            <input id="checkDeviceArea" placeholder="vd: Trạm bơm A">
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <textarea id="checkDeviceNote" rows="3" placeholder="Ghi chú thiết bị"></textarea>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="saveDeviceBtn" onclick="saveChecklistDevice()">Lưu thiết bị</button>
+          <button class="secondary" onclick="resetChecklistDeviceForm()">Làm mới form</button>
+          <button class="secondary" onclick="loadChecklistDevices()">Tải lại</button>
+        </div>
+        <div id="checklistMsg" class="muted"></div>
+      </div>
+
+      <div class="card">
+        <h3>Danh sách thiết bị cần check</h3>
+        <div id="checklistDevicesWrap"></div>
       </div>
     </section>
 
@@ -264,8 +295,11 @@
   </div>
 
 <script>
-const PAGE_IDS = ['records','kyson','code','users'];
+const PAGE_IDS = ['records','checklist','kyson','code','users'];
 let currentUserRole = null;
+let checklistCanWrite = false;
+let editingChecklistDeviceId = null;
+let editingChecklistItemId = null;
 
 async function api(path, opts={}){
   const res = await fetch(path, {headers:{'Content-Type':'application/json'}, credentials:'same-origin', ...opts});
@@ -294,7 +328,7 @@ function fillTimeZoneOptions(list=[]){
   autoSyncTimeZone.value = uniq.includes(current) ? current : 'UTC';
 }
 function showPage(page){
-  const allowed = new Set(['records','kyson']);
+  const allowed = new Set(['records','checklist','kyson']);
   if(currentUserRole === 'admin'){ allowed.add('code'); allowed.add('users'); }
   if(!allowed.has(page)) page = 'records';
   PAGE_IDS.forEach(id => {
@@ -341,11 +375,13 @@ async function boot(){
     document.getElementById('meRole').textContent=me.role;
     const admin=me.role==='admin';
     const canWrite=me.role==='admin'||me.role==='operator';
+    checklistCanWrite = canWrite;
     document.getElementById('nav-users').classList.toggle('hidden', !admin);
     document.getElementById('nav-code').classList.toggle('hidden', !admin);
     document.getElementById('usersCard').classList.toggle('hidden', !admin);
     document.getElementById('codeBackupCard').classList.toggle('hidden', !admin);
     document.getElementById('backupBtn').disabled=!admin;
+    document.getElementById('saveDeviceBtn').disabled=!canWrite;
     document.getElementById('saveRecordBtn').disabled=!canWrite;
     document.getElementById('kysonSyncBtn').disabled=!canWrite;
     document.getElementById('autoSyncSaveBtn').disabled=!admin;
@@ -356,7 +392,7 @@ async function boot(){
     document.getElementById('codeBackupBtn').disabled=!admin;
     if(admin) loadUsers();
     setTodayInputs();
-    await Promise.all([loadAppInfo(), loadRecords(), loadKyson(), loadAutoSyncSettings(), admin ? loadCodeBackups() : Promise.resolve()]);
+    await Promise.all([loadAppInfo(), loadRecords(), loadChecklistDevices(), loadKyson(), loadAutoSyncSettings(), admin ? loadCodeBackups() : Promise.resolve()]);
     showPage(initialPage());
   }catch{}
 }
@@ -371,6 +407,121 @@ async function createRecord(){
     recTitle.value=''; recNote.value='';
     loadRecords();
   }catch(e){ msg('recordMsg', e.message); }
+}
+function resetChecklistDeviceForm(){
+  editingChecklistDeviceId = null;
+  checkDeviceName.value = '';
+  checkDeviceArea.value = '';
+  checkDeviceNote.value = '';
+  saveDeviceBtn.textContent = 'Lưu thiết bị';
+}
+async function loadChecklistDevices(){
+  try{
+    const data = await api('/api/checklist/devices');
+    checklistDevicesWrap.innerHTML = (data.devices || []).length
+      ? data.devices.map(device => `
+        <div class="card" style="margin:12px 0;background:#fafcfc">
+          <div class="row">
+            <div><b>${esc(device.name)}</b><div class="muted">${esc(device.area || '-')}</div></div>
+            <div class="muted">${esc(device.note || '')}</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;align-items:start;flex-wrap:wrap">
+              ${checklistCanWrite ? `<button class="secondary" onclick="editChecklistDevice('${device.id}')">Sửa thiết bị</button>
+              <button class="warn" onclick="deleteChecklistDevice('${device.id}')">Xóa thiết bị</button>` : ''}
+            </div>
+          </div>
+          ${checklistCanWrite ? `<div class="row" style="margin-top:12px">
+            <input id="item-title-${device.id}" placeholder="Tên hạng mục cần check">
+            <input id="item-note-${device.id}" placeholder="Ghi chú hạng mục">
+            <button onclick="saveChecklistItem('${device.id}')">Thêm hạng mục</button>
+          </div>` : ''}
+          <table style="margin-top:12px">
+            <thead><tr><th>Hạng mục cần check</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+            <tbody>
+              ${(device.items || []).length ? device.items.map(item => `
+                <tr>
+                  <td>${esc(item.title)}</td>
+                  <td>${esc(item.note || '')}</td>
+                  <td>
+                    ${checklistCanWrite ? `<button class="secondary" onclick="editChecklistItem('${device.id}','${item.id}')">Sửa</button>
+                    <button class="warn" onclick="deleteChecklistItem('${device.id}','${item.id}')">Xóa</button>` : ''}
+                  </td>
+                </tr>`).join('') : '<tr><td colspan="3" class="muted">Chưa có hạng mục.</td></tr>'}
+            </tbody>
+          </table>
+        </div>`).join('')
+      : '<div class="muted">Chưa có thiết bị checklist nào.</div>';
+    if (editingChecklistItemId) editingChecklistItemId = null;
+  }catch(e){ msg('checklistMsg', e.message); }
+}
+async function saveChecklistDevice(){
+  try{
+    const payload = { name: checkDeviceName.value.trim(), area: checkDeviceArea.value.trim(), note: checkDeviceNote.value.trim() };
+    if(!payload.name) throw new Error('Thiếu tên thiết bị');
+    if(editingChecklistDeviceId){
+      await api(`/api/checklist/devices/${editingChecklistDeviceId}`, {method:'PUT', body:JSON.stringify(payload)});
+      msg('checklistMsg','Đã cập nhật thiết bị.', true);
+    } else {
+      await api('/api/checklist/devices', {method:'POST', body:JSON.stringify(payload)});
+      msg('checklistMsg','Đã tạo thiết bị mới.', true);
+    }
+    resetChecklistDeviceForm();
+    await loadChecklistDevices();
+  }catch(e){ msg('checklistMsg', e.message); }
+}
+async function editChecklistDevice(id){
+  const data = await api('/api/checklist/devices');
+  const device = (data.devices || []).find(x => x.id === id);
+  if(!device) return;
+  editingChecklistDeviceId = id;
+  checkDeviceName.value = device.name || '';
+  checkDeviceArea.value = device.area || '';
+  checkDeviceNote.value = device.note || '';
+  saveDeviceBtn.textContent = 'Cập nhật thiết bị';
+  showPage('checklist');
+}
+async function deleteChecklistDevice(id){
+  try{
+    if(!confirm('Xóa thiết bị này và toàn bộ hạng mục của nó?')) return;
+    await api(`/api/checklist/devices/${id}`, {method:'DELETE'});
+    if(editingChecklistDeviceId === id) resetChecklistDeviceForm();
+    msg('checklistMsg','Đã xóa thiết bị.', true);
+    await loadChecklistDevices();
+  }catch(e){ msg('checklistMsg', e.message); }
+}
+async function saveChecklistItem(deviceId){
+  try{
+    const titleEl = document.getElementById(`item-title-${deviceId}`);
+    const noteEl = document.getElementById(`item-note-${deviceId}`);
+    const payload = { title: titleEl.value.trim(), note: noteEl.value.trim() };
+    if(!payload.title) throw new Error('Thiếu tên hạng mục');
+    if(editingChecklistItemId && editingChecklistItemId.deviceId === deviceId){
+      await api(`/api/checklist/devices/${deviceId}/items/${editingChecklistItemId.itemId}`, {method:'PUT', body:JSON.stringify(payload)});
+      msg('checklistMsg','Đã cập nhật hạng mục.', true);
+      editingChecklistItemId = null;
+    } else {
+      await api(`/api/checklist/devices/${deviceId}/items`, {method:'POST', body:JSON.stringify(payload)});
+      msg('checklistMsg','Đã thêm hạng mục.', true);
+    }
+    await loadChecklistDevices();
+  }catch(e){ msg('checklistMsg', e.message); }
+}
+async function editChecklistItem(deviceId, itemId){
+  const data = await api('/api/checklist/devices');
+  const device = (data.devices || []).find(x => x.id === deviceId);
+  const item = (device?.items || []).find(x => x.id === itemId);
+  if(!item) return;
+  editingChecklistItemId = { deviceId, itemId };
+  document.getElementById(`item-title-${deviceId}`).value = item.title || '';
+  document.getElementById(`item-note-${deviceId}`).value = item.note || '';
+}
+async function deleteChecklistItem(deviceId, itemId){
+  try{
+    if(!confirm('Xóa hạng mục này?')) return;
+    await api(`/api/checklist/devices/${deviceId}/items/${itemId}`, {method:'DELETE'});
+    if(editingChecklistItemId && editingChecklistItemId.itemId === itemId) editingChecklistItemId = null;
+    msg('checklistMsg','Đã xóa hạng mục.', true);
+    await loadChecklistDevices();
+  }catch(e){ msg('checklistMsg', e.message); }
 }
 async function loadAppInfo(){
   try{
