@@ -530,6 +530,18 @@ function resetChecklistDeviceForm(){
   checkDeviceNote.value = '';
   saveDeviceBtn.textContent = 'Lưu thiết bị';
 }
+function resetChecklistItemForm(deviceId){
+  if(!deviceId) return;
+  editingChecklistItemId = null;
+  const titleEl = document.getElementById(`item-title-${deviceId}`);
+  const noteEl = document.getElementById(`item-note-${deviceId}`);
+  const saveBtn = document.getElementById(`item-save-btn-${deviceId}`);
+  const cancelBtn = document.getElementById(`item-cancel-btn-${deviceId}`);
+  if(titleEl) titleEl.value = '';
+  if(noteEl) noteEl.value = '';
+  if(saveBtn) saveBtn.textContent = 'Thêm hạng mục';
+  if(cancelBtn) cancelBtn.classList.add('hidden');
+}
 function handleChecklistFilterChange(){
   renderChecklistDevices();
 }
@@ -561,7 +573,8 @@ function renderChecklistDevices(){
           ${checklistCanWrite ? `<div class="row" style="margin-top:12px">
             <input id="item-title-${device.id}" placeholder="Tên hạng mục cần check">
             <input id="item-note-${device.id}" placeholder="Ghi chú hướng dẫn / tiêu chuẩn">
-            <button onclick="saveChecklistItem('${device.id}')">Thêm hạng mục</button>
+            <button id="item-save-btn-${device.id}" onclick="saveChecklistItem('${device.id}')">Thêm hạng mục</button>
+            <button id="item-cancel-btn-${device.id}" class="secondary hidden" onclick="resetChecklistItemForm('${device.id}')">Hủy sửa</button>
           </div>` : ''}
           <div style="margin-top:12px">
             ${items.length ? items.map(item => {
@@ -675,11 +688,12 @@ async function saveChecklistItem(deviceId){
     if(!payload.title) throw new Error('Thiếu tên hạng mục');
     if(editingChecklistItemId && editingChecklistItemId.deviceId === deviceId){
       await api(`/api/checklist/devices/${deviceId}/items/${editingChecklistItemId.itemId}`, {method:'PUT', body:JSON.stringify(payload)});
-      msg('checklistMsg','Đã cập nhật hạng mục.', true);
-      editingChecklistItemId = null;
+      msg('checklistMsg','Đã cập nhật tên / ghi chú hạng mục.', true);
+      resetChecklistItemForm(deviceId);
     } else {
       await api(`/api/checklist/devices/${deviceId}/items`, {method:'POST', body:JSON.stringify(payload)});
       msg('checklistMsg','Đã thêm hạng mục.', true);
+      resetChecklistItemForm(deviceId);
     }
     await loadChecklistDevices();
   }catch(e){ msg('checklistMsg', e.message); }
@@ -692,12 +706,16 @@ async function editChecklistItem(deviceId, itemId){
   editingChecklistItemId = { deviceId, itemId };
   document.getElementById(`item-title-${deviceId}`).value = item.title || '';
   document.getElementById(`item-note-${deviceId}`).value = item.note || '';
+  const saveBtn = document.getElementById(`item-save-btn-${deviceId}`);
+  const cancelBtn = document.getElementById(`item-cancel-btn-${deviceId}`);
+  if(saveBtn) saveBtn.textContent = 'Cập nhật hạng mục';
+  if(cancelBtn) cancelBtn.classList.remove('hidden');
 }
 async function deleteChecklistItem(deviceId, itemId){
   try{
     if(!confirm('Xóa hạng mục này?')) return;
     await api(`/api/checklist/devices/${deviceId}/items/${itemId}`, {method:'DELETE'});
-    if(editingChecklistItemId && editingChecklistItemId.itemId === itemId) editingChecklistItemId = null;
+    if(editingChecklistItemId && editingChecklistItemId.itemId === itemId) resetChecklistItemForm(deviceId);
     msg('checklistMsg','Đã xóa hạng mục.', true);
     await loadChecklistDevices();
   }catch(e){ msg('checklistMsg', e.message); }
