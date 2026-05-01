@@ -5,18 +5,35 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 ## Tính năng
 - Đăng nhập
 - Phân quyền: `admin` / `operator` / `viewer`
-- Quản lý record nội bộ
+- Nhật ký vận hành nội bộ
+- Checklist vận hành theo thiết bị / hạng mục
+- Cho phép tạo mới, sửa, xóa thiết bị checklist
+- Cho phép tạo mới, sửa tên, sửa ghi chú, xóa hạng mục đã tạo
+- Đánh dấu checkbox hoàn thành cho từng hạng mục
+- Lưu thời gian kiểm tra, người kiểm tra, ghi chú hiện trạng
+- Đính kèm hình ảnh hiện trường cho từng lần check
+- Theo dõi lịch sử check gần đây
+- Lọc theo ngày, ca (`sáng` / `chiều` / `tối`) và chỉ hiện mục chưa check
+- Báo cáo checklist theo ngày / ca / người thực hiện
 - Backup dữ liệu nội bộ
 - Xuất file JSON / CSV
 - Đồng bộ dữ liệu Kyson vào webapp nội bộ
 - Xem nhanh bơm / cảm biến / log / báo cáo nước theo ngày
 - Cài lịch sync tự động hằng ngày ngay trong webapp
+- Quản lý snapshot phiên bản code webapp và khôi phục từ giao diện admin
 
 ## Cấu trúc chính
-- `server.js` — web server Node.js
+- `server.js` — web server Node.js và API nội bộ
 - `public/` — giao diện web
-- `data/` — dữ liệu local
+- `data/` — dữ liệu local (records, users, checklist, cache Kyson)
 - `backups/` — file backup JSON
+
+## Các khu vực chính trong webapp
+- **Nhật ký vận hành**
+- **Checklist vận hành**
+- **Dữ liệu Kyson**
+- **Phiên bản code webapp** (admin)
+- **Quản lý người dùng** (admin)
 
 ## Chạy tay để test nhanh
 ```bash
@@ -178,10 +195,65 @@ App sẽ lưu cache nội bộ vào `data/db.json`, gồm:
 
 Điều này giúp đội vận hành xem lại dữ liệu ngay trong webapp mà không cần gọi script tay mỗi lần.
 
+# Checklist vận hành
+
+## Chức năng chính của checklist
+Trong thẻ **Checklist vận hành**, người dùng có thể:
+- tạo thiết bị mới cần kiểm tra
+- thêm hạng mục cần check cho từng thiết bị
+- sửa tên hạng mục đã tạo
+- cập nhật ghi chú tiêu chuẩn / hướng dẫn cho từng hạng mục
+- tick checkbox hoàn thành
+- lưu thời gian kiểm tra
+- lưu ghi chú hiện trạng / bất thường
+- đính kèm hình ảnh tại hiện trường
+- xem lịch sử check gần đây
+- lọc theo ngày làm việc, ca vận hành và trạng thái chưa check
+- xem báo cáo checklist theo ngày, ca và người thực hiện
+
+## Quy ước ca checklist
+Hệ thống hiện dùng 3 ca cố định:
+- `morning` → Ca sáng
+- `afternoon` → Ca chiều
+- `night` → Ca tối
+
+Mỗi lần lưu checklist sẽ gắn với:
+- ngày làm việc
+- ca làm việc
+- người thực hiện
+- thời gian check
+- ghi chú và hình ảnh (nếu có)
+
+## Yêu cầu khi thay đổi checklist hoặc tính năng giao diện
+Khi thêm hoặc sửa tính năng trong webapp, cần cập nhật lại `ops-standard/README.md` nếu có thay đổi liên quan đến một trong các mục sau:
+- cho phép chỉnh sửa tên hạng mục đã tạo
+- thêm hoặc đổi hành vi của checkbox đánh dấu hoàn thành
+- thêm / sửa trường thời gian kiểm tra
+- thêm / sửa trường ghi chú
+- thêm / sửa upload hình ảnh
+- thay đổi bộ lọc checklist theo ngày / ca / chưa check
+- thay đổi báo cáo checklist theo ngày / người thực hiện
+- thay đổi phân quyền `admin` / `operator` / `viewer`
+- thay đổi API hoặc dữ liệu lưu trong `data/db.json`
+
+Khuyến nghị khi sửa tính năng:
+- nếu thay đổi hành vi người dùng nhìn thấy được, phải cập nhật phần **Tính năng**
+- nếu thêm dữ liệu mới vào checklist, phải mô tả ngắn trong phần **Dữ liệu chính** hoặc **Checklist vận hành**
+- nếu thay đổi thao tác vận hành, phải cập nhật phần **Lệnh vận hành thường dùng** hoặc hướng dẫn liên quan
+
 # Dữ liệu và backup
 
 ## Dữ liệu chính
 - `data/db.json`
+
+Trong file này hiện lưu các nhóm dữ liệu chính:
+- users nội bộ
+- nhật ký vận hành
+- checklist thiết bị / hạng mục
+- lịch sử check theo ngày / ca / người thực hiện
+- ghi chú check và hình ảnh checklist
+- cache dữ liệu Kyson
+- cấu hình auto sync Kyson
 
 Nếu file này chưa tồn tại, app sẽ tự khởi tạo dữ liệu mặc định khi chạy lần đầu.
 

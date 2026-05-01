@@ -154,9 +154,110 @@ function verifyPassword(password, user) {
   const { hash } = hashPassword(password, user.salt);
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(user.hash, 'hex'));
 }
+function normalizeChecklistImage(image = {}) {
+  return {
+    id: image.id || rid(),
+    name: image.name || 'image.jpg',
+    type: image.type || 'image/jpeg',
+    dataUrl: image.dataUrl || '',
+    uploadedAt: image.uploadedAt || now(),
+  };
+}
+function normalizeChecklistShift(value) {
+  const allowed = ['morning', 'afternoon', 'night'];
+  return allowed.includes(value) ? value : 'morning';
+}
+function checklistEntryDate(value) {
+  return String(value || '').slice(0, 10);
+}
+function findChecklistEntry(item, date, shift) {
+  const targetDate = normalizeDate(date) || today();
+  const targetShift = normalizeChecklistShift(shift);
+  return (item.history || []).slice().reverse().find(entry => checklistEntryDate(entry.checkedAt) === targetDate && normalizeChecklistShift(entry.shift) === targetShift) || null;
+}
+function summarizeChecklistReport(devices, { date, shift, user } = {}) {
+  const targetDate = normalizeDate(date) || today();
+  const targetShift = shift ? normalizeChecklistShift(shift) : null;
+  const targetUser = user ? String(user).trim() : '';
+  const rows = [];
+  const byUser = new Map();
+  for (const device of devices) {
+    for (const item of device.items || []) {
+      const entry = (item.history || []).slice().reverse().find(history => {
+        if (checklistEntryDate(history.checkedAt) !== targetDate) return false;
+        if (targetShift && normalizeChecklistShift(history.shift) !== targetShift) return false;
+        if (targetUser && history.checkedBy !== targetUser) return false;
+        return true;
+      }) || null;
+      rows.push({
+        deviceId: device.id,
+        deviceName: device.name,
+        area: device.area || '',
+        itemId: item.id,
+        itemTitle: item.title,
+        checked: Boolean(entry?.checked),
+        checkedAt: entry?.checkedAt || null,
+        checkedBy: entry?.checkedBy || null,
+        shift: entry?.shift || null,
+        note: entry?.note || '',
+      });
+      if (entry?.checkedBy) {
+        const key = entry.checkedBy;
+        const current = byUser.get(key) || { user: key, checked: 0, total: 0 };
+        current.total += 1;
+        if (entry.checked) current.checked += 1;
+        byUser.set(key, current);
+      }
+    }
+  }
+  return {
+    date: targetDate,
+    shift: targetShift,
+    user: targetUser || null,
+    summary: {
+      totalItems: rows.length,
+      checkedItems: rows.filter(x => x.checked).length,
+      uncheckedItems: rows.filter(x => !x.checked).length,
+    },
+    byUser: [...byUser.values()].sort((a, b) => a.user.localeCompare(b.user)),
+    rows,
+  };
+}
+function normalizeChecklistItem(item = {}) {
+  return {
+    id: item.id || rid(),
+    title: item.title || 'Hạng mục chưa đặt tên',
+    note: item.note || '',
+    createdAt: item.createdAt || now(),
+    checked: Boolean(item.checked),
+    lastCheckedAt: item.lastCheckedAt || null,
+    lastCheckedBy: item.lastCheckedBy || null,
+    checkNote: item.checkNote || '',
+    lastShift: normalizeChecklistShift(item.lastShift),
+    images: Array.isArray(item.images) ? item.images.filter(x => x && x.dataUrl).map(normalizeChecklistImage) : [],
+    history: Array.isArray(item.history) ? item.history.slice(-20).map(entry => ({
+      id: entry.id || rid(),
+      checked: Boolean(entry.checked),
+      checkedAt: entry.checkedAt || now(),
+      checkedBy: entry.checkedBy || null,
+      shift: normalizeChecklistShift(entry.shift),
+      note: entry.note || '',
+    })) : [],
+  };
+}
 function ensureDbShape(db) {
   if (!Array.isArray(db.users)) db.users = [];
   if (!Array.isArray(db.records)) db.records = [];
+  if (!db.checklist || typeof db.checklist !== 'object') db.checklist = {};
+  if (!Array.isArray(db.checklist.devices)) db.checklist.devices = [];
+  db.checklist.devices = db.checklist.devices.map(device => ({
+    id: device.id || rid(),
+    name: device.name || 'Thiết bị chưa đặt tên',
+    area: device.area || '',
+    note: device.note || '',
+    createdAt: device.createdAt || now(),
+    items: Array.isArray(device.items) ? device.items.map(normalizeChecklistItem) : [],
+  }));
   if (!db.kyson || typeof db.kyson !== 'object') db.kyson = {};
   if (!db.kyson.snapshot || typeof db.kyson.snapshot !== 'object') db.kyson.snapshot = {};
   if (!Array.isArray(db.kyson.users)) db.kyson.users = [];
@@ -170,7 +271,22 @@ function loadDb() {
     const seed = hashPassword('admin123!');
     const db = ensureDbShape({
       users: [{ id: rid(), username: 'admin', role: 'admin', createdAt: now(), salt: seed.salt, hash: seed.hash }],
-      records: [{ id: rid(), title: 'Khởi tạo hệ thống', status: 'open', note: 'Bản local sẵn sàng vận hành.', createdBy: 'system', createdAt: now() }]
+      records: [{ id: rid(), title: 'Khởi tạo hệ thống', status: 'open', note: 'Bản local sẵn sàng vận hành.', createdBy: 'system', createdAt: now() }],
+      checklist: {
+        devices: [
+          {
+            id: rid(),
+            name: 'Máy bơm tổng',
+            area: 'Trạm bơm',
+            note: 'Checklist mẫu khởi tạo',
+            createdAt: now(),
+            items: [
+              { id: rid(), title: 'Kiểm tra nguồn điện', note: '', createdAt: now() },
+              { id: rid(), title: 'Kiểm tra áp lực', note: '', createdAt: now() },
+            ],
+          },
+        ],
+      }
     });
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
     return db;
@@ -387,6 +503,144 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/records') {
       const me = requireAuth(req, res); if (!me) return;
       return send(res, 200, { records: db.records });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/checklist/devices') {
+      const me = requireAuth(req, res); if (!me) return;
+      return send(res, 200, { devices: db.checklist.devices });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/checklist/report') {
+      const me = requireAuth(req, res); if (!me) return;
+      const report = summarizeChecklistReport(db.checklist.devices, {
+        date: url.searchParams.get('date') || today(),
+        shift: url.searchParams.get('shift') || null,
+        user: url.searchParams.get('user') || null,
+      });
+      return send(res, 200, report);
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/checklist/devices') {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const body = await parseBody(req);
+      if (!body.name) return send(res, 400, { error: 'Thiếu tên thiết bị' });
+      const device = {
+        id: rid(),
+        name: body.name,
+        area: body.area || '',
+        note: body.note || '',
+        createdAt: now(),
+        items: [],
+      };
+      db.checklist.devices.push(device);
+      saveDb(db);
+      return send(res, 200, { ok: true, device });
+    }
+
+    if (req.method === 'PUT' && url.pathname.match(/^\/api\/checklist\/devices\/[^/]+$/)) {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const id = url.pathname.split('/')[4];
+      const device = db.checklist.devices.find(x => x.id === id);
+      if (!device) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
+      const body = await parseBody(req);
+      if (!body.name) return send(res, 400, { error: 'Thiếu tên thiết bị' });
+      device.name = body.name;
+      device.area = body.area || '';
+      device.note = body.note || '';
+      saveDb(db);
+      return send(res, 200, { ok: true, device });
+    }
+
+    if (req.method === 'DELETE' && url.pathname.match(/^\/api\/checklist\/devices\/[^/]+$/)) {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const id = url.pathname.split('/')[4];
+      const idx = db.checklist.devices.findIndex(x => x.id === id);
+      if (idx < 0) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
+      db.checklist.devices.splice(idx, 1);
+      saveDb(db);
+      return send(res, 200, { ok: true });
+    }
+
+    if (req.method === 'POST' && url.pathname.match(/^\/api\/checklist\/devices\/[^/]+\/items$/)) {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const id = url.pathname.split('/')[4];
+      const device = db.checklist.devices.find(x => x.id === id);
+      if (!device) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
+      const body = await parseBody(req);
+      if (!body.title) return send(res, 400, { error: 'Thiếu tên hạng mục' });
+      const item = normalizeChecklistItem({ id: rid(), title: body.title, note: body.note || '', createdAt: now() });
+      device.items.push(item);
+      saveDb(db);
+      return send(res, 200, { ok: true, item, device });
+    }
+
+    if (req.method === 'PUT' && url.pathname.match(/^\/api\/checklist\/devices\/[^/]+\/items\/[^/]+$/)) {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const parts = url.pathname.split('/');
+      const device = db.checklist.devices.find(x => x.id === parts[4]);
+      if (!device) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
+      const item = device.items.find(x => x.id === parts[6]);
+      if (!item) return send(res, 404, { error: 'Không tìm thấy hạng mục' });
+      const body = await parseBody(req);
+      if (!body.title) return send(res, 400, { error: 'Thiếu tên hạng mục' });
+      item.title = body.title;
+      item.note = body.note || '';
+      saveDb(db);
+      return send(res, 200, { ok: true, item, device });
+    }
+
+    if (req.method === 'POST' && url.pathname.match(/^\/api\/checklist\/devices\/[^/]+\/items\/[^/]+\/check$/)) {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const parts = url.pathname.split('/');
+      const device = db.checklist.devices.find(x => x.id === parts[4]);
+      if (!device) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
+      const item = device.items.find(x => x.id === parts[6]);
+      if (!item) return send(res, 404, { error: 'Không tìm thấy hạng mục' });
+      const body = await parseBody(req);
+      const hasIncomingImages = Array.isArray(body.images);
+      const incomingImages = hasIncomingImages ? body.images : [];
+      if (incomingImages.length > 4) return send(res, 400, { error: 'Tối đa 4 hình cho mỗi lần cập nhật' });
+      for (const image of incomingImages) {
+        if (!image || typeof image.dataUrl !== 'string' || !image.dataUrl.startsWith('data:image/')) {
+          return send(res, 400, { error: 'Dữ liệu hình ảnh không hợp lệ' });
+        }
+        if (image.dataUrl.length > 2_500_000) return send(res, 400, { error: 'Hình ảnh quá lớn, vui lòng chọn ảnh nhỏ hơn ~2MB' });
+      }
+      item.checked = body.checked !== undefined ? Boolean(body.checked) : item.checked;
+      item.lastCheckedAt = body.checkedAt || now();
+      item.lastCheckedBy = me.username;
+      item.lastShift = normalizeChecklistShift(body.shift);
+      item.checkNote = body.checkNote || '';
+      if (hasIncomingImages && incomingImages.length) item.images = incomingImages.map(normalizeChecklistImage);
+      item.history = [...item.history, {
+        id: rid(),
+        checked: item.checked,
+        checkedAt: item.lastCheckedAt,
+        checkedBy: item.lastCheckedBy,
+        shift: item.lastShift,
+        note: item.checkNote,
+      }].slice(-20);
+      saveDb(db);
+      return send(res, 200, { ok: true, item, device });
+    }
+
+    if (req.method === 'DELETE' && url.pathname.match(/^\/api\/checklist\/devices\/[^/]+\/items\/[^/]+$/)) {
+      const me = requireAuth(req, res); if (!me) return;
+      if (!requireRole(me, ['admin', 'operator'], res)) return;
+      const parts = url.pathname.split('/');
+      const device = db.checklist.devices.find(x => x.id === parts[4]);
+      if (!device) return send(res, 404, { error: 'Không tìm thấy thiết bị' });
+      const idx = device.items.findIndex(x => x.id === parts[6]);
+      if (idx < 0) return send(res, 404, { error: 'Không tìm thấy hạng mục' });
+      device.items.splice(idx, 1);
+      saveDb(db);
+      return send(res, 200, { ok: true, device });
     }
 
     if (req.method === 'GET' && url.pathname === '/api/kyson') {
