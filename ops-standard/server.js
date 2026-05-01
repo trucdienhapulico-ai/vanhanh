@@ -163,6 +163,66 @@ function normalizeChecklistImage(image = {}) {
     uploadedAt: image.uploadedAt || now(),
   };
 }
+function normalizeChecklistShift(value) {
+  const allowed = ['morning', 'afternoon', 'night'];
+  return allowed.includes(value) ? value : 'morning';
+}
+function checklistEntryDate(value) {
+  return String(value || '').slice(0, 10);
+}
+function findChecklistEntry(item, date, shift) {
+  const targetDate = normalizeDate(date) || today();
+  const targetShift = normalizeChecklistShift(shift);
+  return (item.history || []).slice().reverse().find(entry => checklistEntryDate(entry.checkedAt) === targetDate && normalizeChecklistShift(entry.shift) === targetShift) || null;
+}
+function summarizeChecklistReport(devices, { date, shift, user } = {}) {
+  const targetDate = normalizeDate(date) || today();
+  const targetShift = shift ? normalizeChecklistShift(shift) : null;
+  const targetUser = user ? String(user).trim() : '';
+  const rows = [];
+  const byUser = new Map();
+  for (const device of devices) {
+    for (const item of device.items || []) {
+      const entry = (item.history || []).slice().reverse().find(history => {
+        if (checklistEntryDate(history.checkedAt) !== targetDate) return false;
+        if (targetShift && normalizeChecklistShift(history.shift) !== targetShift) return false;
+        if (targetUser && history.checkedBy !== targetUser) return false;
+        return true;
+      }) || null;
+      rows.push({
+        deviceId: device.id,
+        deviceName: device.name,
+        area: device.area || '',
+        itemId: item.id,
+        itemTitle: item.title,
+        checked: Boolean(entry?.checked),
+        checkedAt: entry?.checkedAt || null,
+        checkedBy: entry?.checkedBy || null,
+        shift: entry?.shift || null,
+        note: entry?.note || '',
+      });
+      if (entry?.checkedBy) {
+        const key = entry.checkedBy;
+        const current = byUser.get(key) || { user: key, checked: 0, total: 0 };
+        current.total += 1;
+        if (entry.checked) current.checked += 1;
+        byUser.set(key, current);
+      }
+    }
+  }
+  return {
+    date: targetDate,
+    shift: targetShift,
+    user: targetUser || null,
+    summary: {
+      totalItems: rows.length,
+      checkedItems: rows.filter(x => x.checked).length,
+      uncheckedItems: rows.filter(x => !x.checked).length,
+    },
+    byUser: [...byUser.values()].sort((a, b) => a.user.localeCompare(b.user)),
+    rows,
+  };
+}
 function normalizeChecklistItem(item = {}) {
   return {
     id: item.id || rid(),
@@ -173,12 +233,14 @@ function normalizeChecklistItem(item = {}) {
     lastCheckedAt: item.lastCheckedAt || null,
     lastCheckedBy: item.lastCheckedBy || null,
     checkNote: item.checkNote || '',
+    lastShift: normalizeChecklistShift(item.lastShift),
     images: Array.isArray(item.images) ? item.images.filter(x => x && x.dataUrl).map(normalizeChecklistImage) : [],
-    history: Array.isArray(item.history) ? item.history.slice(-10).map(entry => ({
+    history: Array.isArray(item.history) ? item.history.slice(-20).map(entry => ({
       id: entry.id || rid(),
       checked: Boolean(entry.checked),
       checkedAt: entry.checkedAt || now(),
       checkedBy: entry.checkedBy || null,
+      shift: normalizeChecklistShift(entry.shift),
       note: entry.note || '',
     })) : [],
   };
@@ -448,6 +510,16 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { devices: db.checklist.devices });
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/checklist/report') {
+      const me = requireAuth(req, res); if (!me) return;
+      const report = summarizeChecklistReport(db.checklist.devices, {
+        date: url.searchParams.get('date') || today(),
+        shift: url.searchParams.get('shift') || null,
+        user: url.searchParams.get('user') || null,
+      });
+      return send(res, 200, report);
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/checklist/devices') {
       const me = requireAuth(req, res); if (!me) return;
       if (!requireRole(me, ['admin', 'operator'], res)) return;
@@ -543,6 +615,7 @@ const server = http.createServer(async (req, res) => {
       item.checked = body.checked !== undefined ? Boolean(body.checked) : item.checked;
       item.lastCheckedAt = body.checkedAt || now();
       item.lastCheckedBy = me.username;
+      item.lastShift = normalizeChecklistShift(body.shift);
       item.checkNote = body.checkNote || '';
       if (hasIncomingImages && incomingImages.length) item.images = incomingImages.map(normalizeChecklistImage);
       item.history = [...item.history, {
@@ -550,8 +623,9 @@ const server = http.createServer(async (req, res) => {
         checked: item.checked,
         checkedAt: item.lastCheckedAt,
         checkedBy: item.lastCheckedBy,
+        shift: item.lastShift,
         note: item.checkNote,
-      }].slice(-10);
+      }].slice(-20);
       saveDb(db);
       return send(res, 200, { ok: true, item, device });
     }

@@ -46,6 +46,8 @@
     .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#eceff1;color:#455a64}
     .badge.ok{background:#dcedc8;color:#33691e}
     .history-list{margin:8px 0 0;padding-left:18px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+    .report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
     @media (max-width: 900px){
       .layout{grid-template-columns:1fr}
       .sidebar{position:static}
@@ -146,13 +148,74 @@
       </div>
 
       <div class="card">
-        <div class="row">
+        <div class="toolbar">
           <div>
             <h3>Danh sách thiết bị cần check</h3>
             <div class="muted">Nhân viên có thể tick hoàn thành, ghi chú nhanh và đính ảnh hiện trạng.</div>
           </div>
+          <div>
+            <div class="muted">Ngày làm việc</div>
+            <input id="checklistWorkDate" type="date" onchange="handleChecklistFilterChange()">
+          </div>
+          <div>
+            <div class="muted">Ca</div>
+            <select id="checklistShift" onchange="handleChecklistFilterChange()">
+              <option value="morning">Ca sáng</option>
+              <option value="afternoon">Ca chiều</option>
+              <option value="night">Ca tối</option>
+            </select>
+          </div>
+          <div>
+            <label><input id="checklistOnlyUnchecked" type="checkbox" onchange="handleChecklistFilterChange()"> Chỉ hiện mục chưa check</label>
+          </div>
+          <div>
+            <button class="secondary" onclick="loadChecklistDevices()">Làm mới danh sách</button>
+          </div>
         </div>
         <div id="checklistDevicesWrap"></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div>
+            <h3>Báo cáo checklist</h3>
+            <div class="muted">Tổng hợp theo ngày, ca và người thực hiện.</div>
+          </div>
+          <div>
+            <div class="muted">Ngày báo cáo</div>
+            <input id="reportDate" type="date">
+          </div>
+          <div>
+            <div class="muted">Ca báo cáo</div>
+            <select id="reportShift">
+              <option value="">Tất cả ca</option>
+              <option value="morning">Ca sáng</option>
+              <option value="afternoon">Ca chiều</option>
+              <option value="night">Ca tối</option>
+            </select>
+          </div>
+          <div>
+            <div class="muted">Người thực hiện</div>
+            <input id="reportUser" placeholder="lọc theo user">
+          </div>
+          <div>
+            <button onclick="loadChecklistReport()">Xem báo cáo</button>
+          </div>
+        </div>
+        <div id="checklistReportMsg" class="muted" style="margin-top:10px"></div>
+        <div id="checklistReportSummary" class="report-grid" style="margin-top:12px"></div>
+        <div class="scroll" style="margin-top:12px">
+          <table>
+            <thead><tr><th>Thiết bị</th><th>Hạng mục</th><th>Ca</th><th>Trạng thái</th><th>Thời gian</th><th>Người check</th><th>Ghi chú</th></tr></thead>
+            <tbody id="checklistReportBody"></tbody>
+          </table>
+        </div>
+        <div class="scroll" style="margin-top:12px">
+          <table>
+            <thead><tr><th>Người thực hiện</th><th>Đã check</th><th>Tổng mục có log</th></tr></thead>
+            <tbody id="checklistReportUsersBody"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -314,6 +377,7 @@
 const PAGE_IDS = ['records','checklist','kyson','code','users'];
 let currentUserRole = null;
 let checklistCanWrite = false;
+let checklistDevicesCache = [];
 let editingChecklistDeviceId = null;
 let editingChecklistItemId = null;
 
@@ -336,6 +400,8 @@ function setTodayInputs(){
   const d = new Date().toISOString().slice(0,10);
   kysonDateFrom.value = d;
   kysonDateTo.value = d;
+  if (document.getElementById('checklistWorkDate')) checklistWorkDate.value = d;
+  if (document.getElementById('reportDate')) reportDate.value = d;
 }
 function fillTimeZoneOptions(list=[]){
   const current = autoSyncTimeZone.value || 'UTC';
@@ -408,7 +474,7 @@ async function boot(){
     document.getElementById('codeBackupBtn').disabled=!admin;
     if(admin) loadUsers();
     setTodayInputs();
-    await Promise.all([loadAppInfo(), loadRecords(), loadChecklistDevices(), loadKyson(), loadAutoSyncSettings(), admin ? loadCodeBackups() : Promise.resolve()]);
+    await Promise.all([loadAppInfo(), loadRecords(), loadChecklistDevices(), loadChecklistReport(), loadKyson(), loadAutoSyncSettings(), admin ? loadCodeBackups() : Promise.resolve()]);
     showPage(initialPage());
   }catch{}
 }
@@ -423,6 +489,18 @@ async function createRecord(){
     recTitle.value=''; recNote.value='';
     loadRecords();
   }catch(e){ msg('recordMsg', e.message); }
+}
+function shiftLabel(value){
+  return ({morning:'Ca sáng', afternoon:'Ca chiều', night:'Ca tối'})[value] || 'Ca sáng';
+}
+function getChecklistSelectedDate(){
+  return checklistWorkDate?.value || new Date().toISOString().slice(0,10);
+}
+function getChecklistSelectedShift(){
+  return checklistShift?.value || 'morning';
+}
+function getChecklistEntryFor(item, date, shift){
+  return (item.history || []).slice().reverse().find(entry => String(entry.checkedAt || '').slice(0,10) === date && (entry.shift || 'morning') === shift) || null;
 }
 function formatDateTime(value){
   if(!value) return 'Chưa cập nhật';
@@ -452,11 +530,22 @@ function resetChecklistDeviceForm(){
   checkDeviceNote.value = '';
   saveDeviceBtn.textContent = 'Lưu thiết bị';
 }
-async function loadChecklistDevices(){
-  try{
-    const data = await api('/api/checklist/devices');
-    checklistDevicesWrap.innerHTML = (data.devices || []).length
-      ? data.devices.map(device => `
+function handleChecklistFilterChange(){
+  renderChecklistDevices();
+}
+function renderChecklistDevices(){
+  const date = getChecklistSelectedDate();
+  const shift = getChecklistSelectedShift();
+  const onlyUnchecked = !!checklistOnlyUnchecked?.checked;
+  const devices = checklistDevicesCache || [];
+  checklistDevicesWrap.innerHTML = devices.length
+    ? devices.map(device => {
+        const items = (device.items || []).filter(item => {
+          const entry = getChecklistEntryFor(item, date, shift);
+          return onlyUnchecked ? !(entry && entry.checked) : true;
+        });
+        if (!items.length && onlyUnchecked) return '';
+        return `
         <div class="card device-card">
           <div class="row">
             <div>
@@ -475,37 +564,49 @@ async function loadChecklistDevices(){
             <button onclick="saveChecklistItem('${device.id}')">Thêm hạng mục</button>
           </div>` : ''}
           <div style="margin-top:12px">
-            ${(device.items || []).length ? device.items.map(item => `
-              <div class="check-item ${item.checked ? 'done' : ''}">
+            ${items.length ? items.map(item => {
+              const selectedEntry = getChecklistEntryFor(item, date, shift);
+              const isDone = !!selectedEntry?.checked;
+              return `
+              <div class="check-item ${isDone ? 'done' : ''}">
                 <div class="check-head">
                   <div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                       <b>${esc(item.title)}</b>
-                      <span class="badge ${item.checked ? 'ok' : ''}">${item.checked ? 'Đã kiểm tra' : 'Chưa kiểm tra'}</span>
+                      <span class="badge ${isDone ? 'ok' : ''}">${isDone ? 'Đã kiểm tra' : 'Chưa kiểm tra'}</span>
+                      <span class="badge">${esc(shiftLabel(shift))}</span>
                     </div>
                     <div class="check-meta">Chuẩn check: ${esc(item.note || 'Chưa có ghi chú hướng dẫn')}</div>
-                    <div class="check-meta">Lần cập nhật cuối: ${esc(formatDateTime(item.lastCheckedAt))}${item.lastCheckedBy ? ` • ${esc(item.lastCheckedBy)}` : ''}</div>
+                    <div class="check-meta">Lần cập nhật ca này: ${esc(formatDateTime(selectedEntry?.checkedAt || null))}${selectedEntry?.checkedBy ? ` • ${esc(selectedEntry.checkedBy)}` : ''}</div>
                   </div>
                   <div class="check-actions">
-                    ${checklistCanWrite ? `<label><input type="checkbox" id="item-checked-${item.id}" ${item.checked ? 'checked' : ''}> Hoàn thành</label>
+                    ${checklistCanWrite ? `<label><input type="checkbox" id="item-checked-${item.id}" ${isDone ? 'checked' : ''}> Hoàn thành</label>
                     <button onclick="saveChecklistCheck('${device.id}','${item.id}')">Lưu kết quả</button>
                     <button class="secondary" onclick="editChecklistItem('${device.id}','${item.id}')">Sửa mục</button>
                     <button class="warn" onclick="deleteChecklistItem('${device.id}','${item.id}')">Xóa</button>` : ''}
                   </div>
                 </div>
                 <div class="row" style="margin-top:10px">
-                  <textarea id="item-check-note-${item.id}" rows="3" placeholder="Ghi chú hiện trạng / bất thường" ${checklistCanWrite ? '' : 'disabled'}>${esc(item.checkNote || '')}</textarea>
+                  <textarea id="item-check-note-${item.id}" rows="3" placeholder="Ghi chú hiện trạng / bất thường" ${checklistCanWrite ? '' : 'disabled'}>${esc(selectedEntry?.note || item.checkNote || '')}</textarea>
                 </div>
                 ${checklistCanWrite ? `<div class="row" style="margin-top:10px">
-                  <input id="item-time-${item.id}" type="datetime-local" value="${item.lastCheckedAt ? new Date(item.lastCheckedAt).toISOString().slice(0,16) : ''}">
+                  <input id="item-time-${item.id}" type="datetime-local" value="${selectedEntry?.checkedAt ? new Date(selectedEntry.checkedAt).toISOString().slice(0,16) : ''}">
                   <input id="item-images-${item.id}" type="file" accept="image/*" multiple>
                 </div>` : ''}
                 ${(item.images || []).length ? `<div class="thumbs">${item.images.map(image => `<a href="${esc(image.dataUrl)}" target="_blank" rel="noopener"><img src="${esc(image.dataUrl)}" alt="${esc(image.name || 'check-image')}"></a>`).join('')}</div>` : '<div class="muted" style="margin-top:10px">Chưa có hình ảnh.</div>'}
-                ${(item.history || []).length ? `<details style="margin-top:10px"><summary><b>Lịch sử gần đây</b></summary><ul class="history-list">${item.history.slice().reverse().map(h => `<li>${h.checked ? '✔' : '✖'} ${esc(formatDateTime(h.checkedAt))}${h.checkedBy ? ` • ${esc(h.checkedBy)}` : ''}${h.note ? ` • ${esc(h.note)}` : ''}</li>`).join('')}</ul></details>` : ''}
-              </div>`).join('') : '<div class="muted">Chưa có hạng mục.</div>'}
+                ${(item.history || []).length ? `<details style="margin-top:10px"><summary><b>Lịch sử gần đây</b></summary><ul class="history-list">${item.history.slice().reverse().map(h => `<li>${h.checked ? '✔' : '✖'} ${esc(shiftLabel(h.shift || 'morning'))} • ${esc(formatDateTime(h.checkedAt))}${h.checkedBy ? ` • ${esc(h.checkedBy)}` : ''}${h.note ? ` • ${esc(h.note)}` : ''}</li>`).join('')}</ul></details>` : ''}
+              </div>`;
+            }).join('') : '<div class="muted">Không còn mục nào theo bộ lọc hiện tại.</div>'}
           </div>
-        </div>`).join('')
-      : '<div class="muted">Chưa có thiết bị checklist nào.</div>';
+        </div>`;
+      }).join('')
+    : '<div class="muted">Chưa có thiết bị checklist nào.</div>';
+}
+async function loadChecklistDevices(){
+  try{
+    const data = await api('/api/checklist/devices');
+    checklistDevicesCache = data.devices || [];
+    renderChecklistDevices();
     if (editingChecklistItemId) editingChecklistItemId = null;
   }catch(e){ msg('checklistMsg', e.message); }
 }
@@ -558,11 +659,12 @@ async function saveChecklistCheck(deviceId, itemId){
         checked: checkedEl ? checkedEl.checked : false,
         checkNote: noteEl ? noteEl.value.trim() : '',
         checkedAt,
+        shift: getChecklistSelectedShift(),
         images,
       })
     });
     msg('checklistMsg','Đã lưu kết quả checklist.', true);
-    await loadChecklistDevices();
+    await Promise.all([loadChecklistDevices(), loadChecklistReport()]);
   }catch(e){ msg('checklistMsg', e.message); }
 }
 async function saveChecklistItem(deviceId){
@@ -599,6 +701,26 @@ async function deleteChecklistItem(deviceId, itemId){
     msg('checklistMsg','Đã xóa hạng mục.', true);
     await loadChecklistDevices();
   }catch(e){ msg('checklistMsg', e.message); }
+}
+async function loadChecklistReport(){
+  try{
+    const params = new URLSearchParams({ date: reportDate.value || new Date().toISOString().slice(0,10) });
+    if(reportShift.value) params.set('shift', reportShift.value);
+    if(reportUser.value.trim()) params.set('user', reportUser.value.trim());
+    const data = await api(`/api/checklist/report?${params.toString()}`);
+    checklistReportSummary.innerHTML = `
+      <div class="stat"><span class="muted">Tổng mục</span><b>${data.summary.totalItems}</b></div>
+      <div class="stat"><span class="muted">Đã check</span><b>${data.summary.checkedItems}</b></div>
+      <div class="stat"><span class="muted">Chưa check</span><b>${data.summary.uncheckedItems}</b></div>
+      <div class="stat"><span class="muted">Ca</span><b>${data.shift ? shiftLabel(data.shift) : 'Tất cả'}</b></div>`;
+    checklistReportBody.innerHTML = data.rows.length
+      ? data.rows.map(row => `<tr><td>${esc(row.deviceName)}<div class="muted">${esc(row.area || '')}</div></td><td>${esc(row.itemTitle)}</td><td>${esc(row.shift ? shiftLabel(row.shift) : '-')}</td><td>${row.checked ? '✔ Đã check' : '✖ Chưa check'}</td><td>${esc(formatDateTime(row.checkedAt))}</td><td>${esc(row.checkedBy || '-')}</td><td>${esc(row.note || '')}</td></tr>`).join('')
+      : '<tr><td colspan="7" class="muted">Chưa có dữ liệu báo cáo.</td></tr>';
+    checklistReportUsersBody.innerHTML = data.byUser.length
+      ? data.byUser.map(row => `<tr><td>${esc(row.user)}</td><td>${esc(row.checked)}</td><td>${esc(row.total)}</td></tr>`).join('')
+      : '<tr><td colspan="3" class="muted">Chưa có người thực hiện trong bộ lọc này.</td></tr>';
+    msg('checklistReportMsg', `Báo cáo ngày ${data.date}${data.shift ? ` • ${shiftLabel(data.shift)}` : ''}`, true);
+  }catch(e){ msg('checklistReportMsg', e.message); }
 }
 async function loadAppInfo(){
   try{
