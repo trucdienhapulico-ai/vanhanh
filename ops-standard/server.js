@@ -154,6 +154,12 @@ function verifyPassword(password, user) {
   const { hash } = hashPassword(password, user.salt);
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(user.hash, 'hex'));
 }
+function normalizeRole(role) {
+  return ['admin', 'manager', 'operator', 'viewer'].includes(role) ? role : 'viewer';
+}
+function normalizeManagementScope(value) {
+  return String(value || '').trim();
+}
 function normalizeChecklistImage(image = {}) {
   return {
     id: image.id || rid(),
@@ -247,6 +253,11 @@ function normalizeChecklistItem(item = {}) {
 }
 function ensureDbShape(db) {
   if (!Array.isArray(db.users)) db.users = [];
+  db.users = db.users.map(user => ({
+    ...user,
+    role: normalizeRole(user.role),
+    managementScope: normalizeManagementScope(user.managementScope),
+  }));
   if (!Array.isArray(db.records)) db.records = [];
   if (!db.checklist || typeof db.checklist !== 'object') db.checklist = {};
   if (!Array.isArray(db.checklist.devices)) db.checklist.devices = [];
@@ -270,7 +281,7 @@ function loadDb() {
   if (!fs.existsSync(DB_FILE)) {
     const seed = hashPassword('admin123!');
     const db = ensureDbShape({
-      users: [{ id: rid(), username: 'admin', role: 'admin', createdAt: now(), salt: seed.salt, hash: seed.hash }],
+      users: [{ id: rid(), username: 'admin', role: 'admin', managementScope: 'Toàn hệ thống', createdAt: now(), salt: seed.salt, hash: seed.hash }],
       records: [{ id: rid(), title: 'Khởi tạo hệ thống', status: 'open', note: 'Bản local sẵn sàng vận hành.', createdBy: 'system', createdAt: now() }],
       checklist: {
         devices: [
@@ -481,8 +492,8 @@ const server = http.createServer(async (req, res) => {
       const user = db.users.find(u => u.username === body.username);
       if (!user || !body.password || !verifyPassword(body.password, user)) return send(res, 401, { error: 'Sai tài khoản hoặc mật khẩu' });
       const sid = rid();
-      sessions.set(sid, { id: user.id, username: user.username, role: user.role });
-      return send(res, 200, { ok: true, username: user.username, role: user.role }, { 'Set-Cookie': `sid=${sid}; HttpOnly; SameSite=Lax; Path=/` });
+      sessions.set(sid, { id: user.id, username: user.username, role: user.role, managementScope: user.managementScope || '' });
+      return send(res, 200, { ok: true, username: user.username, role: user.role, managementScope: user.managementScope || '' }, { 'Set-Cookie': `sid=${sid}; HttpOnly; SameSite=Lax; Path=/` });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/logout') {
@@ -718,7 +729,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/users') {
       const me = requireAuth(req, res); if (!me) return;
       if (!requireRole(me, ['admin'], res)) return;
-      return send(res, 200, { users: db.users.map(({ hash, salt, ...u }) => u) });
+      return send(res, 200, { users: db.users.map(({ hash, salt, ...u }) => ({ ...u, role: normalizeRole(u.role), managementScope: normalizeManagementScope(u.managementScope) })) });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/users') {
@@ -727,9 +738,24 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       if (!body.username || !body.password || !body.role) return send(res, 400, { error: 'Thiếu thông tin user' });
       if (db.users.some(u => u.username === body.username)) return send(res, 400, { error: 'User đã tồn tại' });
-      if (!['admin', 'operator', 'viewer'].includes(body.role)) return send(res, 400, { error: 'Role không hợp lệ' });
+      if (!['admin', 'manager', 'operator', 'viewer'].includes(body.role)) return send(res, 400, { error: 'Role không hợp lệ' });
       const seed = hashPassword(body.password);
-      db.users.push({ id: rid(), username: body.username, role: body.role, createdAt: now(), salt: seed.salt, hash: seed.hash });
+      db.users.push({ id: rid(), username: body.username, role: body.role, managementScope: normalizeManagementScope(body.managementScope), createdAt: now(), salt: seed.salt, hash: seed.hash });
+      saveDb(db);
+      return send(res, 200, { ok: true });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/me/change-password') {
+      const me = requireAuth(req, res); if (!me) return;
+      const body = await parseBody(req);
+      if (!body.currentPassword || !body.newPassword) return send(res, 400, { error: 'Thiếu mật khẩu hiện tại hoặc mật khẩu mới' });
+      if (String(body.newPassword).length < 6) return send(res, 400, { error: 'Mật khẩu mới phải từ 6 ký tự' });
+      const user = db.users.find(u => u.id === me.id);
+      if (!user) return send(res, 404, { error: 'Không tìm thấy tài khoản' });
+      if (!verifyPassword(body.currentPassword, user)) return send(res, 400, { error: 'Mật khẩu hiện tại không đúng' });
+      const seed = hashPassword(body.newPassword);
+      user.salt = seed.salt;
+      user.hash = seed.hash;
       saveDb(db);
       return send(res, 200, { ok: true });
     }

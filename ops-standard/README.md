@@ -4,7 +4,7 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 
 ## Tính năng
 - Đăng nhập
-- Phân quyền: `admin` / `operator` / `viewer`
+- Phân quyền: `admin` / `manager` / `operator` / `viewer`
 - Nhật ký vận hành nội bộ
 - Checklist vận hành theo thiết bị / hạng mục
 - Cho phép tạo mới, sửa, xóa thiết bị checklist
@@ -21,6 +21,8 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 - Xem nhanh bơm / cảm biến / log / báo cáo nước theo ngày
 - Cài lịch sync tự động hằng ngày ngay trong webapp
 - Quản lý snapshot phiên bản code webapp và khôi phục từ giao diện admin
+- Cho phép từng người dùng tự đổi mật khẩu trong webapp
+- Gán `hạng mục quản lý` cho từng tài khoản để mô tả phạm vi phụ trách
 
 ## Cấu trúc chính
 - `server.js` — web server Node.js và API nội bộ
@@ -35,6 +37,15 @@ Webapp nội bộ cho vận hành sân golf, chạy local trên Ubuntu và có t
 - **Dữ liệu Kyson**
 - **Phiên bản code webapp** (admin)
 - **Quản lý người dùng** (admin)
+
+## Tài khoản cá nhân
+Mỗi người dùng sau khi đăng nhập có thể tự đổi mật khẩu trong mục:
+- **Tài khoản cá nhân**
+
+Yêu cầu:
+- nhập đúng mật khẩu hiện tại
+- nhập mật khẩu mới
+- nhập lại để xác nhận
 
 ## Sơ đồ UI / góp ý
 Webapp có một thẻ riêng tên **Sơ đồ UI / góp ý** để:
@@ -82,6 +93,23 @@ Ví dụ triển khai hiện tại:
 - pass: `admin123!`
 
 **Bắt buộc đổi ngay khi đưa vào vận hành thực tế.**
+
+## Mô hình phân quyền hiện tại
+- `admin` — quyền cao nhất, quản lý user, snapshot code, toàn bộ cấu hình và dữ liệu
+- `manager` — người quản lý, có thể thao tác vận hành như `operator` và được gắn `hạng mục quản lý`
+- `operator` — cập nhật nhật ký, checklist, sync dữ liệu vận hành
+- `viewer` — chỉ xem
+
+## Hạng mục quản lý
+Trong phần **Quản lý người dùng**, admin có thể khai báo thêm trường:
+- `Hạng mục quản lý`
+
+Ví dụ:
+- `Checklist điện`
+- `Trạm bơm`
+- `Hệ thống tưới khu A`
+
+Trường này dùng để mô tả phạm vi phụ trách của từng tài khoản quản lý / vận hành.
 
 ---
 

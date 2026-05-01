@@ -75,8 +75,20 @@
       <div class="row">
         <div><b>Người dùng:</b> <span id="meName"></span></div>
         <div><b>Vai trò:</b> <span id="meRole"></span></div>
+        <div><b>Hạng mục quản lý:</b> <span id="meScope">-</span></div>
         <div><button class="secondary" onclick="logout()">Đăng xuất</button></div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Tài khoản cá nhân</h2>
+      <div class="row">
+        <input id="currentPassword" type="password" placeholder="Mật khẩu hiện tại">
+        <input id="newPassword" type="password" placeholder="Mật khẩu mới">
+        <input id="confirmNewPassword" type="password" placeholder="Nhập lại mật khẩu mới">
+        <button onclick="changeMyPassword()">Đổi mật khẩu</button>
+      </div>
+      <div id="accountMsg" class="muted" style="margin-top:10px"></div>
     </div>
 
     <div class="layout">
@@ -380,13 +392,15 @@
           <select id="newRole">
             <option value="viewer">viewer</option>
             <option value="operator">operator</option>
+            <option value="manager">manager</option>
             <option value="admin">admin</option>
           </select>
+          <input id="newManagementScope" placeholder="hạng mục quản lý, vd: Trạm bơm / Checklist điện">
           <button onclick="createUser()">Tạo user</button>
         </div>
         <div id="userMsg" class="muted" style="margin-top:10px"></div>
         <table style="margin-top:12px">
-          <thead><tr><th>User</th><th>Vai trò</th><th>Tạo lúc</th></tr></thead>
+          <thead><tr><th>User</th><th>Vai trò</th><th>Hạng mục quản lý</th><th>Tạo lúc</th></tr></thead>
           <tbody id="usersBody"></tbody>
         </table>
       </div>
@@ -412,7 +426,8 @@ const UI_MAP_ROWS = [
   ['Dữ liệu Kyson','Cài đặt sync tự động','Bật-tắt / giờ / múi giờ / số ngày lấy lại','Cấu hình tự đồng bộ theo lịch','Dữ liệu Kyson > Cài đặt sync tự động > [ô/nút] > sửa thành ...'],
   ['Dữ liệu Kyson','Khối thống kê và bảng dữ liệu','Thẻ thống kê / báo cáo ngày / danh sách bơm / cảm biến / log','Theo dõi dữ liệu nước và trạng thái hệ thống','Dữ liệu Kyson > [tên bảng/thẻ] > sửa thành ...'],
   ['Phiên bản code webapp','Quản lý snapshot code','Phiên bản hiện tại / tạo snapshot / danh sách restore','Quản lý version code webapp','Phiên bản code webapp > [nút/bảng] > sửa thành ...'],
-  ['Quản lý người dùng','Form và bảng user','Tài khoản / mật khẩu / vai trò / danh sách user','Tạo và kiểm soát tài khoản nội bộ','Quản lý người dùng > [form/bảng] > sửa thành ...'],
+  ['Quản lý người dùng','Form và bảng user','Tài khoản / mật khẩu / vai trò / hạng mục quản lý / danh sách user','Tạo và kiểm soát tài khoản nội bộ','Quản lý người dùng > [form/bảng] > sửa thành ...'],
+  ['Tài khoản cá nhân','Đổi mật khẩu','Mật khẩu hiện tại / mật khẩu mới / nhập lại / nút đổi mật khẩu','Cho từng người dùng tự đổi mật khẩu','Tài khoản cá nhân > Đổi mật khẩu > [ô/nút] > sửa thành ...'],
 ];
 let currentUserRole = null;
 let checklistCanWrite = false;
@@ -497,8 +512,9 @@ async function boot(){
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('meName').textContent=me.username;
     document.getElementById('meRole').textContent=me.role;
+    document.getElementById('meScope').textContent=me.managementScope || '-';
     const admin=me.role==='admin';
-    const canWrite=me.role==='admin'||me.role==='operator';
+    const canWrite=me.role==='admin'||me.role==='manager'||me.role==='operator';
     checklistCanWrite = canWrite;
     document.getElementById('nav-users').classList.toggle('hidden', !admin);
     document.getElementById('nav-code').classList.toggle('hidden', !admin);
@@ -821,13 +837,23 @@ async function restoreCodeBackupSnapshot(name){
 }
 async function loadUsers(){
   const data=await api('/api/users');
-  usersBody.innerHTML=data.users.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.role)}</td><td>${esc(u.createdAt)}</td></tr>`).join('');
+  usersBody.innerHTML=data.users.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.role)}</td><td>${esc(u.managementScope || '-')}</td><td>${esc(u.createdAt)}</td></tr>`).join('');
 }
 async function createUser(){
   try{
-    await api('/api/users',{method:'POST',body:JSON.stringify({username:newUser.value.trim(),password:newPass.value,role:newRole.value})});
-    msg('userMsg','Đã tạo user.', true); newUser.value=''; newPass.value=''; loadUsers();
+    await api('/api/users',{method:'POST',body:JSON.stringify({username:newUser.value.trim(),password:newPass.value,role:newRole.value,managementScope:newManagementScope.value.trim()})});
+    msg('userMsg','Đã tạo user.', true); newUser.value=''; newPass.value=''; newManagementScope.value=''; loadUsers();
   }catch(e){ msg('userMsg', e.message); }
+}
+async function changeMyPassword(){
+  try{
+    if(newPassword.value !== confirmNewPassword.value) throw new Error('Mật khẩu mới nhập lại chưa khớp');
+    await api('/api/me/change-password', {method:'POST', body:JSON.stringify({currentPassword:currentPassword.value, newPassword:newPassword.value})});
+    currentPassword.value='';
+    newPassword.value='';
+    confirmNewPassword.value='';
+    msg('accountMsg','Đã đổi mật khẩu.', true);
+  }catch(e){ msg('accountMsg', e.message); }
 }
 async function runBackup(){
   try{
